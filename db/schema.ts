@@ -45,6 +45,12 @@ export const chats = pgTable(
       .$defaultFn(() => getUuid()),
     name: text("name").notNull(),
     isDisabled: boolean("is_disabled").default(false).notNull(),
+    // Claude Agent SDK session ID - stored for potential resume while process is alive
+    // If null or stale, we hydrate a new SDK session from our stored messages
+    sdkSessionId: text("sdk_session_id"),
+    // Raw SDK transcript JSONL - stored verbatim for 1:1 hydration after process restart
+    // This is the exact content of ~/.claude/projects/{path}/{sessionId}.jsonl
+    sdkTranscript: text("sdk_transcript"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),
@@ -57,6 +63,39 @@ export const chats = pgTable(
   },
 )
 
+// Content block types matching Anthropic API response format
+// Stored as-is from the API for perfect fidelity
+export interface TextContentBlock {
+  type: "text"
+  text: string
+}
+
+export interface ToolUseContentBlock {
+  type: "tool_use"
+  id: string
+  name: string
+  input: unknown
+}
+
+export interface ToolResultContentBlock {
+  type: "tool_result"
+  tool_use_id: string
+  content: unknown
+  is_error?: boolean
+}
+
+export interface ThinkingContentBlock {
+  type: "thinking"
+  thinking: string
+}
+
+export type ContentBlock =
+  | TextContentBlock
+  | ToolUseContentBlock
+  | ToolResultContentBlock
+  | ThinkingContentBlock
+  | { type: string; [key: string]: unknown } // Future block types
+
 export const messages = pgTable(
   "messages",
   {
@@ -68,49 +107,11 @@ export const messages = pgTable(
       .references(() => chats.id),
     userId: text("user_id").references(() => users.id), // null for system messages
     role: roleEnum("role").notNull(),
-    content: text("content"),
-    toolCalls: safeJsonb("tool_calls")
-      .$type<
-        Array<{
-          id: string
-          name: string
-          data: string
-        }>
-      >()
-      .default([]),
-    toolResponses: safeJsonb("tool_responses")
-      .$type<
-        Array<{
-          toolCallId: string
-          name: string
-          content?: string
-          metadata?: any
-        }>
-      >()
-      .default([]),
-    thinking: text("thinking"),
-    thinkingBlocks: text("thinking_blocks"), // Serialized ThinkingBlock[]
-    citations: safeJsonb("citations")
-      .$type<
-        Array<{
-          type: string // 'search_result_location', 'char_location', 'page_location', 'content_block_location'
-          source?: string // URL for search results
-          title?: string // Document/search result title
-          citedText: string // The exact text being cited
-          documentIndex?: number // For document citations
-          documentTitle?: string // For document citations
-          searchResultIndex?: number // For search result citations
-          startCharIndex?: number // For char_location type (from source document)
-          endCharIndex?: number // For char_location type (from source document)
-          startPageNumber?: number // For page_location type
-          endPageNumber?: number // For page_location type
-          startBlockIndex?: number // For content_block_location type
-          endBlockIndex?: number // For content_block_location type
-          contentStartCharIndex?: number // Position in response content where citation should be inserted
-          contentEndCharIndex?: number // End position in response content for citation
-        }>
-      >()
-      .default([]),
+    // Raw content blocks from Anthropic API - stored verbatim
+    // For user messages: [{ type: "text", text: "..." }]
+    // For assistant messages: [{ type: "text", ... }, { type: "tool_use", ... }, { type: "thinking", ... }]
+    contentBlocks: safeJsonb("content_blocks").$type<ContentBlock[]>().default([]),
+    // User-provided attachments (images, files) - separate from API response
     attachments: safeJsonb("attachments")
       .$type<
         Array<{

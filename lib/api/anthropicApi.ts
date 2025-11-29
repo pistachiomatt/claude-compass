@@ -31,13 +31,13 @@ const createVertexClient = () => {
   })
 
   return new AnthropicVertex(options)
-}O
+}
 
 /**
  * Convert model name to native Anthropic format
  * Handles both ClaudeModel enum values and legacy string formats
  */
-function toNativeModel(model: string | ClaudeModel): string {
+export function toNativeModel(model: string | ClaudeModel): string {
   // If it's already a ClaudeModel enum value, return as-is
   if (Object.values(ClaudeModel).includes(model as ClaudeModel)) {
     return model

@@ -16,6 +16,13 @@ const schema = z.object({
   TEMP_DIR: z.string(),
   GOOGLE_CLOUD_PROJECT_ID: z.string().optional(),
   GOOGLE_CLOUD_VERTEX_AI_AUTH_JSON: z.any().optional(),
+  // Claude Agent SDK - Vertex AI configuration
+  // See: https://code.claude.com/docs/en/google-vertex-ai
+  CLAUDE_CODE_USE_VERTEX: z.string().optional(), // Set to "1" to enable Vertex
+  CLOUD_ML_REGION: z.string().optional(), // e.g., "global" or "us-east5"
+
+  // Functionality config
+  MAX_TURN_COUNT: z.coerce.number(),
 })
 
 const rawEnv = {
@@ -25,6 +32,8 @@ const rawEnv = {
   CONCURRENCY: process.env.CONCURRENCY,
   TEMP_DIR: process.env.TEMP_DIR,
   GOOGLE_CLOUD_PROJECT_ID: process.env.GOOGLE_CLOUD_PROJECT_ID,
+  CLAUDE_CODE_USE_VERTEX: process.env.CLAUDE_CODE_USE_VERTEX,
+  CLOUD_ML_REGION: process.env.CLOUD_ML_REGION,
   GOOGLE_CLOUD_VERTEX_AI_AUTH_JSON: (() => {
     const rawValue = process.env.GOOGLE_CLOUD_VERTEX_AI_AUTH_JSON
     if (!rawValue) return rawValue
@@ -39,6 +48,8 @@ const rawEnv = {
       return undefined
     }
   })(),
+
+  MAX_TURN_COUNT: process.env.MAX_TURN_COUNT,
 }
 
 // Check if validation should be disabled
