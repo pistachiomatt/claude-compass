@@ -1,5 +1,6 @@
 "use client"
 
+import "@/styles/global.css"
 import { trpc } from "@/lib/trpc/client"
 import { FC } from "react"
 

@@ -187,6 +187,7 @@ lib/
   const { data, isLoading } = trpc.chat.getById.useQuery(id)
   ```
 - The tRPC provider wraps the app via `trpc.withTRPC()` in `ClientLayout.tsx`
+- UI uses Shadcn UI and Tailwind CSS. Shadcn UI components are in the `@/components/ui` directory. Tailwind CSS is in the `styles/global.css` file.
 
 **IDs**
 
