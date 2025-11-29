@@ -11,11 +11,10 @@ import type { NextPageContext } from "next"
 import { transformer } from "@/lib/trpc/transformer"
 import type { AppRouter } from "@/app/api/trpc/[trpc]/routers"
 import SuperJSON from "superjson"
-import { env } from "@/lib/env.server"
 
 function getBaseUrl() {
-  if (env.NEXT_PUBLIC_BASE_URL) {
-    return env.NEXT_PUBLIC_BASE_URL
+  if (process.env.NEXT_PUBLIC_BASE_URL) {
+    return process.env.NEXT_PUBLIC_BASE_URL
   }
 
   // assume localhost

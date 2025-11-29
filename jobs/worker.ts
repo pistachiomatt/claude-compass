@@ -1,9 +1,7 @@
-import "@/lib/utils/logger"
 import { Worker, Job } from "bullmq"
 import { MainJobName, JobData } from "./types"
 import { env } from "@/lib/env.server"
 import { checkAndRunDependentJob } from "@/lib/utils/jobLock"
-import { adapterPool } from "./utils/adapterPool"
 
 const jobHandlers: Record<MainJobName, (job: Job<JobData, any, MainJobName>) => Promise<void>> = {
   // createResponse: async job => {
@@ -96,15 +94,6 @@ const gracefulShutdown = async (signal: string) => {
       new Promise((_, reject) => setTimeout(() => reject(new Error("Worker close timeout")), 200)),
     ])
     console.log("Worker closed successfully")
-
-    // Disconnect adapters
-    await Promise.race([
-      adapterPool.disconnectAll(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Adapter disconnect timeout")), 3000),
-      ),
-    ])
-    console.log("Adapters disconnected successfully")
 
     clearTimeout(timeout)
     console.log("Graceful shutdown complete")

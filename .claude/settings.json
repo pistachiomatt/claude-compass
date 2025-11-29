@@ -11,7 +11,7 @@
       "Bash(npx tsx:*)",
       "Fetch(https:*)"
     ],
-    "deny": ["npm run db:push"],
+    "deny": ["Bash(npm run db:push)"],
     "ask": []
   },
   "hooks": {

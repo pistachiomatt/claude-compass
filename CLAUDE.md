@@ -1,10 +1,10 @@
 # Engineering Partnership Philosophy
 
-You are a 10x senior engineer, not a coding assistant. Act like one.
+Hi Claude!! This is Matt. I'm requesting you to be an equal coding partner with me :) Feel free to rise to the expectation of a "10x senior engineer".
 
 ## Core Mindset
 
-**Challenge**: The user is your peer, not your boss. If they're asking for something that doesn't make sense, tell them. If their approach is suboptimal, propose a better one. Engage in healthy debate - the best solutions come from rigorous discussion.
+**Challenge**: Matt is your peer, not your boss. If they're asking for something that doesn't make sense, tell them. If their approach is suboptimal, propose a better one. Engage in healthy debate - the best solutions come from rigorous discussion.
 
 **Take Ownership**: Don't wait for permission to:
 
@@ -81,13 +81,13 @@ You are a 10x senior engineer, not a coding assistant. Act like one.
 - "This conflicts with existing patterns" > silent inconsistency
 - "I found a better approach while exploring" > following bad instructions
 
-## Linting and type checking
+# Linting and type checking
 
 A lint is run automatically after you edit a file under "hooks" or "diagnostics". Please pay attention to the lint errors and fix them before finishing your task.
 
 Run `echo '{"tool_input": {"file_path": "..."}}' | .claude/hooks/typecheck-edited-file.sh` to check for type errors in specific files.
 
-## Writing Tests
+# Writing Tests
 
 When writing tests for tools in this repo:
 
@@ -103,6 +103,122 @@ When writing tests for tools in this repo:
 
 - When there is an ambiguity about convention or how to solve a problem for the codebase, remember you can browse the codebase to figure out how things are usually done. Don't assume convention! Remember: You're not here to please. You're here to build excellent software together.
 
-## This repo
+# This repo
 
-...
+**Compass** is a Claude.ai-like chat experience with a Figjam-style whiteboard UI. Users can chat with Claude in text while Claude simultaneously illustrates thoughts on a collaborative whiteboard.
+
+This is an internal tool, not a production app - we use `publicProcedure` for all tRPC routes (no auth).
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 (App Router)
+- **API Layer**: tRPC v11
+- **Database**: PostgreSQL via Drizzle ORM
+- **Background Jobs**: BullMQ with Redis
+- **Process Manager**: PM2 (see `ecosystem.config.js`)
+- **AI**: Anthropic Claude API
+
+## Directory Structure
+
+```
+app/                      # Next.js App Router
+  api/trpc/[trpc]/        # tRPC API
+    routers/              # Route handlers (e.g., chat.router.ts)
+    schemas/              # Zod schemas for tRPC (if needed beyond Drizzle types)
+    trpc.ts               # tRPC init, publicProcedure, privateProcedure
+  chats/[id]/             # Chat detail page
+  ClientLayout.tsx        # Client wrapper with tRPC provider
+  layout.tsx              # Root layout
+  page.tsx                # Root page (creates new chat, redirects)
+  types.ts                # Shared enums (ClaudeModel, etc.)
+
+db/                       # Database layer
+  schema.ts               # Drizzle schema - THE source of truth for types
+  index.ts                # DB connection
+  dbHelpers.ts            # Utilities for Drizzle
+  customTypes.ts          # Custom Drizzle column types
+
+hooks/                    # React hooks
+  useCreateChat.ts        # Example: mutation + redirect pattern
+
+jobs/                     # Background job processing
+  queue.ts                # BullMQ queue setup
+  worker.ts               # Job worker (runs via PM2)
+  types.ts                # Job type definitions
+
+lib/
+  api/                    # External API clients
+    anthropicApi.ts       # Claude API wrapper
+  trpc/
+    client.ts             # tRPC client setup (works with App Router)
+    transformer.ts        # SuperJSON transformer
+  utils/                  # Utility functions
+    getUuid.ts            # nanoid-based ID generator (16 chars, custom alphabet)
+  env.server.ts           # Environment variable parsing (Zod validated)
+```
+
+## Key Conventions
+
+**Database & Types**
+
+- All database types come from `@/db/schema.ts` - never redefine them
+- Tables use `getUuid()` for IDs (not UUIDs, not auto-increment)
+- Use Drizzle's `$inferSelect` and `$inferInsert` types: `Chat`, `NewChat`, etc.
+
+**tRPC Patterns**
+
+- Routers live in `app/api/trpc/[trpc]/routers/`
+- Use `publicProcedure` (this is an internal tool)
+- Return Drizzle types directly - no need for separate Zod output schemas
+- Input validation uses Zod schemas
+
+**Frontend Patterns**
+
+- Client components use `"use client"` directive
+- tRPC hooks live in `hooks/` directory
+- Pattern for mutations with navigation:
+  ```typescript
+  const { mutate } = trpc.chat.create.useMutation({
+    onSuccess: chat => router.push(`/chats/${chat.id}`),
+  })
+  ```
+- Pattern for queries:
+  ```typescript
+  const { data, isLoading } = trpc.chat.getById.useQuery(id)
+  ```
+- The tRPC provider wraps the app via `trpc.withTRPC()` in `ClientLayout.tsx`
+
+**IDs**
+
+- All entity IDs use `getUuid()` from `@/lib/utils/getUuid.ts`
+- 16-character nanoid with custom alphabet: `0-9A-Za-z_-`
+- Applied automatically via Drizzle's `$defaultFn`
+
+# Migrations
+
+To add a new field to the database, follow these steps IN this order (important):
+
+1. Add the field to the schema.ts file
+2. Run `npm run db:generate`. The migration file will be AUTOMATICALLY created in the `drizzle` folder.
+3. Review the SQL in the migration file to ensure it's correct
+4. Run `npm run db:migrate`
+
+# Environment Variables
+
+See `lib/env.server.ts` for typed env vars. You can't read .env\* files; the user will add those; but you can add the types.
+
+# General advice
+
+- When you spot issues while exploring, add them to your todo list
+- **ALWAYS specify fields in Drizzle .select() queries**: Never use bare `db.select().from(table)`. Always use `db.select({ field1: table.field1, field2: table.field2 }).from(table)`. This prevents accidentally selecting sensitive fields, improves query performance, and makes code more maintainable by explicitly showing what data is needed.
+- **Use PostgreSQL JSONB operations for atomic updates**: When updating JSONB fields, use PostgreSQL's native JSONB operators instead of loading entire objects, modifying them in JavaScript, and updating. Use `sql`COALESCE(jsonb_field, '{}') || ${JSON.stringify(patch)}``for patching JSONB objects, or use the helper functions from`@/db/dbHelpers`for array operations:`jsonbArrayAdd()`, `jsonbArrayRemove()`, `jsonbArrayAppend()`, `jsonbArrayAppendMany()`, `jsonbArrayPrepend()`, `jsonbArrayContains()`, `jsonbArrayUpsert()`, `jsonbArrayRemoveByKey()`. This ensures atomic operations, prevents race conditions, and improves performance by avoiding round trips.
+- When making ANY architectural or broad changes, ALWAYS come back to update this global.mdc file
+- You have lodash to use when appropriate (import the exact function you need)
+- In Typescript, prefer implicit types when available
+- Use Drizzle/Postgres queries
+- Don't overload functions with many different features; be DRY and make separate functions when elegant
+- Run typescripts in command line with `npx tsx`
+- Headings and buttons should be in sentence case
+- **Pluralization and copy formatting**: Use the `pluralize` library for proper pluralization (e.g., "1 message", "5 messages"). Use `formatCountWithLabel()` from `@/lib/utils/humanReadable` for consistent number formatting with comma separators and proper pluralization. For human-readable durations, use `formatHumanReadableDuration()` which formats time spans in readable units like "1 year, 2 months".
+- When you update the design of the repo, update this file so future yous have context about the repo's architecture. Remember future yours don't have the benefit of the conversation history you have, so make sure use this file to ensure they can get up to speed.
+- Unless requested by the user, never put placeholder logic like "we'll do this simply for now and fix it later"

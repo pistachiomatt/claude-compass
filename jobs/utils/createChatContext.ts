@@ -1,8 +1,7 @@
-import { db } from '@/db'
-import { ChatPlatform, chats } from '@/db/schema'
-import { eq } from 'drizzle-orm'
-import type { ChatContext, ChatInterface } from '@/lib/chat/types'
-import { adapterPool } from './adapterPool'
+import { db } from "@/db"
+import { ChatPlatform, chats } from "@/db/schema"
+import { eq } from "drizzle-orm"
+import type { ChatContext, ChatInterface } from "@/lib/chat/types"
 
 interface CreateChatContextParams {
   chatId: string
@@ -23,9 +22,6 @@ export async function createChatContext({
   if (!chat) {
     throw new Error(`Chat not found: ${chatId}`)
   }
-
-  // Get adapter from pool (reuses existing connections)
-  const adapter = await adapterPool.getAdapter(platform)
 
   // Build context
   const chatInterface: ChatInterface = {

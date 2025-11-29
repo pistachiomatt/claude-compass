@@ -1,8 +1,8 @@
 import { router } from "../trpc"
-import { demoRouter } from "./_demo.router"
+import { chatRouter } from "./chat.router"
 
 export const appRouter = router({
-  demo: demoRouter,
+  chat: chatRouter,
 })
 
 export type AppRouter = typeof appRouter

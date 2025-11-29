@@ -31,7 +31,7 @@ const createVertexClient = () => {
   })
 
   return new AnthropicVertex(options)
-}
+}O
 
 /**
  * Convert model name to native Anthropic format
