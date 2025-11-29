@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__firecrawl__firecrawl_search",
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx tsx:*)",
+      "Fetch(https:*)"
+    ],
+    "deny": ["npm run db:push"],
+    "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck-edited-file.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
