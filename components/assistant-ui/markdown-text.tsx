@@ -115,7 +115,7 @@ const defaultComponents = memoizeMarkdownComponents({
   ),
   p: ({ className, ...props }) => (
     <p
-      className={cn("aui-md-p leading-6 [&:not(:first-child)]:mt-4 last:mb-0", className)}
+      className={cn("aui-md-p leading-6 [&:not(:first-child)]:mt-4 last:mb-5", className)}
       {...props}
     />
   ),
@@ -194,7 +194,10 @@ const defaultComponents = memoizeMarkdownComponents({
   ),
   pre: ({ className, ...props }) => (
     <pre
-      className={cn("aui-md-pre overflow-x-auto rounded-b-lg bg-muted p-4 text-sm", className)}
+      className={cn(
+        "aui-md-pre overflow-x-auto rounded-lg border border-muted bg-popover px-4 py-3 mt-4 text-sm custom-tracking-tight",
+        className,
+      )}
       {...props}
     />
   ),
@@ -204,12 +207,11 @@ const defaultComponents = memoizeMarkdownComponents({
       <code
         className={cn(
           !isCodeBlock &&
-            "aui-md-inline-code relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold",
+            "aui-md-inline-code relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold  custom-tracking-tight",
           className,
         )}
         {...props}
       />
     )
   },
-  CodeHeader,
 })
