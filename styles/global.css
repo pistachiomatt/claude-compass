@@ -113,7 +113,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    text-wrap: pretty;
     font-size: 15px;
   }
   .font-serif {
@@ -135,6 +134,82 @@
 
 /* ===== Whiteboard Styles ===== */
 @layer components {
+  /* ===== Markdown Styles (for flowtoken AnimatedMarkdown) ===== */
+  .aui-md h1 {
+    @apply scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mt-6 mb-4 first:mt-0 last:mb-0;
+  }
+  .aui-md h2 {
+    @apply scroll-m-20 pb-2 text-3xl font-semibold mt-8 mb-4 first:mt-0 last:mb-0;
+  }
+  .aui-md h3 {
+    @apply scroll-m-20 text-2xl font-semibold mt-6 mb-3 first:mt-0 last:mb-0;
+  }
+  .aui-md h4 {
+    @apply scroll-m-20 text-xl font-semibold mt-5 mb-2 first:mt-0 last:mb-0;
+  }
+  .aui-md h5 {
+    @apply text-lg font-semibold mt-4 mb-2 first:mt-0 last:mb-0;
+  }
+  .aui-md h6 {
+    @apply text-base font-semibold mt-4 mb-2 first:mt-0 last:mb-0;
+  }
+  .aui-md p {
+    @apply leading-6 [&:not(:first-child)]:mt-4 last:mb-5;
+  }
+  .aui-md a {
+    @apply font-medium text-primary underline underline-offset-4;
+  }
+  .aui-md blockquote {
+    @apply mt-4 border-l-2 border-muted-foreground pl-6 italic text-muted-foreground;
+  }
+  .aui-md ul {
+    @apply my-4 ml-6 list-disc [&>li]:mt-2 marker:text-muted-foreground;
+  }
+  .aui-md ol {
+    @apply my-4 ml-6 list-decimal [&>li]:mt-2 marker:text-muted-foreground;
+  }
+  .aui-md li {
+    @apply leading-7;
+  }
+  .aui-md hr {
+    @apply my-6 border-muted;
+  }
+  .aui-md table {
+    @apply my-4 w-full;
+  }
+  .aui-md th {
+    @apply border border-muted bg-muted px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right;
+  }
+  .aui-md td {
+    @apply border border-muted px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right;
+  }
+  .aui-md tr {
+    @apply m-0 bg-muted;
+  }
+  .aui-md sup {
+    @apply [&>a]:text-xs [&>a]:no-underline;
+  }
+  .aui-md pre {
+    @apply overflow-x-auto mt-4 rounded-lg text-sm custom-tracking-tight font-mono;
+
+    /* This is pretty jank but an adequate workaround for a prototype to avoid gross library styles. */
+    pre {
+      @apply p-4 bg-popover border border-muted mt-0;
+      background: var(--popover) !important;
+    }
+
+    button[aria-label="Copy code"] {
+      @apply hidden;
+    }
+  }
+  .aui-md pre code {
+    background: transparent !important;
+    font-family: inherit !important;
+  }
+  .aui-md code:not(pre code) {
+    @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold custom-tracking-tight;
+  }
+
   /* Cluster heading - matches aui-md-h1 style */
   .wb-cluster-heading {
     @apply text-lg font-semibold tracking-tight text-muted-foreground;

@@ -226,3 +226,4 @@ See `lib/env.server.ts` for typed env vars. You can't read .env\* files; the use
 - Unless requested by the user, never put placeholder logic like "we'll do this simply for now and fix it later".
 - On front-end, you can ONLY import @/db/schema with `type` because otherwise it'll bring in server components.
 - Never run npm build
+- NEVER return an object from useAssistantState because it causes the error "Maximum update depth exceeded"

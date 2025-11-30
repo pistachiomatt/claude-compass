@@ -67,6 +67,7 @@
     "draggabilly": "^3.0.0",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.44.1",
+    "flowtoken": "^1.0.40",
     "framer-motion": "^11.15.0",
     "geist": "^1.3.1",
     "google-auth-library": "^10.1.0",
