@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback, useMemo, createContext, useContext } from "react"
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion"
 import type { ClusterGridData, ClusterGridItem, DragState, ClusterColor } from "./types"
 import { CLUSTER_COLOR_VALUES, DEFAULT_CLUSTER_COLORS } from "./types"
 import {
@@ -14,6 +15,16 @@ import {
   type ItemLayout,
   type LayoutConfig,
 } from "./layout"
+
+// ============================================================================
+// Animation Config - gentle, graceful springs
+// ============================================================================
+
+const SPRING_CONFIG = {
+  layout: { type: "spring" as const, stiffness: 400, damping: 35 },
+  ghost: { type: "spring" as const, stiffness: 300, damping: 30 },
+  enter: { type: "spring" as const, stiffness: 350, damping: 25 },
+}
 
 // ============================================================================
 // Context
@@ -38,6 +49,57 @@ interface ClusterGridProps {
 }
 
 // ============================================================================
+// Item Card Component - handles hover effects
+// ============================================================================
+
+interface ItemCardProps {
+  item: ClusterGridItem
+  layout: ItemLayout
+  colors: { bg: string; border: string; text: string }
+  config: LayoutConfig
+  isReady: boolean
+  onPointerDown: (e: React.PointerEvent) => void
+  onMeasure: (el: HTMLDivElement | null) => void
+}
+
+function ItemCard({ item, layout, colors, config, isReady, onPointerDown, onMeasure }: ItemCardProps) {
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8, x: layout.x, y: layout.y }}
+      animate={{
+        opacity: isReady ? 1 : 0,
+        scale: 1,
+        x: layout.x,
+        y: layout.y,
+        rotate: isHovered ? 1.5 : 0,
+      }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={SPRING_CONFIG.layout}
+      ref={onMeasure}
+      className="absolute rounded-lg p-4 cursor-grab active:cursor-grabbing"
+      style={{
+        width: config.columnWidth,
+        minHeight: config.minItemHeight,
+        backgroundColor: colors.bg,
+        border: `1px solid ${colors.border}`,
+        color: colors.text,
+      }}
+      whileHover={{
+        boxShadow: "0 8px 24px -4px oklch(0 0 0 / 0.12)",
+      }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      onPointerDown={onPointerDown}
+    >
+      <h3 className="wb-sticky-heading">{item.heading}</h3>
+      {item.body && <p className="wb-sticky-body mt-1">{item.body}</p>}
+    </motion.div>
+  )
+}
+
+// ============================================================================
 // Cluster Component
 // ============================================================================
 
@@ -45,15 +107,16 @@ interface ClusterProps {
   name: string
   items: ClusterGridItem[]
   color: ClusterColor
-  ghostAt: [number, number] | null // Show ghost at this position
-  ghostHeight: number | null // Height of the ghost (matches dragged item)
-  excludeItemId: string | null // Don't render this item (it's being dragged)
+  ghostAt: [number, number] | null
+  ghostHeight: number | null
+  excludeItemId: string | null
   onPointerDown: (e: React.PointerEvent, item: ClusterGridItem) => void
-  onBoundsChange: (width: number, height: number) => void // Report measured bounds
-  onItemHeightsChange: (heights: Map<string, number>) => void // Report item heights
+  onBoundsChange: (width: number, height: number) => void
+  onItemHeightsChange: (heights: Map<string, number>) => void
+  onContentRef: (el: HTMLDivElement | null) => void
 }
 
-function Cluster({ name, items, color, ghostAt, ghostHeight, excludeItemId, onPointerDown, onBoundsChange, onItemHeightsChange }: ClusterProps) {
+function Cluster({ name, items, color, ghostAt, ghostHeight, excludeItemId, onPointerDown, onBoundsChange, onItemHeightsChange, onContentRef }: ClusterProps) {
   const context = useContext(ClusterGridContext)
   const config = context?.config || DEFAULT_LAYOUT_CONFIG
   const colors = CLUSTER_COLOR_VALUES[color]
@@ -62,31 +125,58 @@ function Cluster({ name, items, color, ghostAt, ghostHeight, excludeItemId, onPo
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const [measuredHeights, setMeasuredHeights] = useState<Map<string, number>>(new Map())
   const [isReady, setIsReady] = useState(false)
+  const observerRef = useRef<ResizeObserver | null>(null)
 
+  // Set up ResizeObserver once
   useEffect(() => {
     const measureHeights = () => {
       const newHeights = new Map<string, number>()
       itemRefs.current.forEach((el, id) => {
         newHeights.set(id, el.offsetHeight)
       })
-      setMeasuredHeights(newHeights)
-      // Mark as ready once we have measurements
       if (newHeights.size > 0) {
+        setMeasuredHeights(newHeights)
         setIsReady(true)
       }
     }
 
-    // Measure after initial render
+    observerRef.current = new ResizeObserver(measureHeights)
+
+    // Initial measure after render
     requestAnimationFrame(measureHeights)
 
-    // Re-measure on resize
-    const observer = new ResizeObserver(measureHeights)
-    itemRefs.current.forEach((el) => observer.observe(el))
+    return () => observerRef.current?.disconnect()
+  }, [])
 
-    return () => observer.disconnect()
+  // Re-measure when items change
+  useEffect(() => {
+    const measureHeights = () => {
+      const newHeights = new Map<string, number>()
+      itemRefs.current.forEach((el, id) => {
+        newHeights.set(id, el.offsetHeight)
+      })
+      if (newHeights.size > 0) {
+        setMeasuredHeights(newHeights)
+        setIsReady(true)
+      }
+    }
+    requestAnimationFrame(measureHeights)
   }, [items])
 
-  // Report item heights to parent
+  // Callback for registering refs and observing
+  const handleMeasureRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) {
+      itemRefs.current.set(id, el)
+      observerRef.current?.observe(el)
+    } else {
+      const existing = itemRefs.current.get(id)
+      if (existing) {
+        observerRef.current?.unobserve(existing)
+      }
+      itemRefs.current.delete(id)
+    }
+  }, [])
+
   useEffect(() => {
     if (measuredHeights.size > 0) {
       onItemHeightsChange(measuredHeights)
@@ -110,17 +200,14 @@ function Cluster({ name, items, color, ghostAt, ghostHeight, excludeItemId, onPo
     )
   }, [items, measuredHeights, config, ghostAt, excludeItemId, ghostHeight])
 
-  // Create layout map for quick lookup
   const layoutMap = useMemo(() => {
     const map = new Map<string, ItemLayout>()
     layouts.forEach((l) => map.set(l.id, l))
     return map
   }, [layouts])
 
-  // Content bounds
   const bounds = useMemo(() => calculateContentBounds(layouts), [layouts])
 
-  // Report bounds to parent
   useEffect(() => {
     onBoundsChange(
       bounds.width || config.columnWidth,
@@ -128,72 +215,133 @@ function Cluster({ name, items, color, ghostAt, ghostHeight, excludeItemId, onPo
     )
   }, [bounds, config.columnWidth, config.minItemHeight, onBoundsChange])
 
+  const ghostLayout = layoutMap.get("__ghost__")
+
   return (
     <div data-cluster-name={name}>
-      {/* Cluster heading */}
       <h2 className="wb-cluster-heading mb-4">{name}</h2>
 
-      {/* Items container */}
-      <div
+      <motion.div
+        ref={onContentRef}
         className="relative"
-        style={{
+        animate={{
           width: bounds.width || config.columnWidth,
           minHeight: bounds.height || config.minItemHeight,
-          transition: "min-height 0.2s ease-out",
         }}
+        transition={SPRING_CONFIG.layout}
       >
-        {/* Render actual items */}
-        {items.map((item) => {
-          // Skip the item being dragged (it's rendered at root level)
-          if (item.id === excludeItemId) return null
+        <AnimatePresence mode="popLayout">
+          {items.map((item) => {
+            if (item.id === excludeItemId) return null
 
-          const layout = layoutMap.get(item.id)
-          if (!layout) return null
+            const layout = layoutMap.get(item.id)
+            if (!layout) return null
 
-          return (
-            <div
-              key={item.id}
-              ref={(el) => {
-                if (el) itemRefs.current.set(item.id, el)
-                else itemRefs.current.delete(item.id)
+            return (
+              <ItemCard
+                key={item.id}
+                item={item}
+                layout={layout}
+                colors={colors}
+                config={config}
+                isReady={isReady}
+                onPointerDown={(e) => onPointerDown(e, item)}
+                onMeasure={(el) => handleMeasureRef(item.id, el)}
+              />
+            )
+          })}
+        </AnimatePresence>
+
+        {/* Ghost placeholder */}
+        <AnimatePresence>
+          {ghostAt && ghostLayout && (
+            <motion.div
+              key="ghost"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{
+                opacity: 0.5,
+                scale: 1,
+                x: ghostLayout.x,
+                y: ghostLayout.y,
+                height: ghostHeight || config.minItemHeight,
               }}
-              className="absolute rounded-lg p-4 cursor-grab active:cursor-grabbing"
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={SPRING_CONFIG.ghost}
+              className="absolute rounded-lg"
               style={{
                 width: config.columnWidth,
-                minHeight: config.minItemHeight,
-                transform: `translate(${layout.x}px, ${layout.y}px)`,
-                transition: "transform 0.2s ease-out, opacity 0.15s ease-out",
-                opacity: isReady ? 1 : 0,
                 backgroundColor: colors.bg,
-                border: `1px solid ${colors.border}`,
-                color: colors.text,
-                boxShadow: "0 2px 8px -2px oklch(0 0 0 / 0.06)",
+                border: `2px dashed ${colors.border}`,
               }}
-              onPointerDown={(e) => onPointerDown(e, item)}
-            >
-              <h3 className="wb-sticky-heading">{item.heading}</h3>
-              {item.body && <p className="wb-sticky-body mt-1">{item.body}</p>}
-            </div>
-          )
-        })}
-
-        {/* Render ghost placeholder */}
-        {ghostAt && (
-          <div
-            className="absolute rounded-lg p-4"
-            style={{
-              width: config.columnWidth,
-              height: ghostHeight || config.minItemHeight,
-              transform: `translate(${layoutMap.get("__ghost__")?.x ?? 0}px, ${layoutMap.get("__ghost__")?.y ?? 0}px)`,
-              transition: "transform 0.2s ease-out, height 0.15s ease-out",
-              backgroundColor: colors.bg,
-              border: `2px dashed ${colors.border}`,
-              opacity: 0.5,
-            }}
-          />
-        )}
-      </div>
+            />
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
+  )
+}
+
+// ============================================================================
+// Dragged Item Component - rubber band physics
+// ============================================================================
+
+interface DraggedItemProps {
+  dragState: DragState
+  item: ClusterGridItem
+  colors: { bg: string; border: string; text: string }
+  config: LayoutConfig
+}
+
+function DraggedItem({ dragState, item, colors, config }: DraggedItemProps) {
+  // Use springs for smooth rubber-band following
+  const x = useMotionValue(dragState.currentX)
+  const y = useMotionValue(dragState.currentY)
+
+  const springX = useSpring(x, { stiffness: 600, damping: 40 })
+  const springY = useSpring(y, { stiffness: 600, damping: 40 })
+
+  // Subtle rotation based on horizontal velocity
+  const rotate = useTransform(springX, (latest) => {
+    const velocity = springX.getVelocity()
+    return Math.max(-8, Math.min(8, velocity / 150))
+  })
+
+  // Update target position when drag moves
+  useEffect(() => {
+    x.set(dragState.currentX)
+    y.set(dragState.currentY)
+  }, [dragState.currentX, dragState.currentY, x, y])
+
+  return (
+    <motion.div
+      className="rounded-lg p-4 pointer-events-none"
+      style={{
+        position: "absolute",
+        x: springX,
+        y: springY,
+        rotate,
+        width: dragState.itemWidth,
+        minHeight: config.minItemHeight,
+        backgroundColor: colors.bg,
+        border: `1px solid ${colors.border}`,
+        color: colors.text,
+        zIndex: 1000,
+        cursor: "grabbing",
+      }}
+      initial={{ scale: 1, boxShadow: "0 2px 8px -2px oklch(0 0 0 / 0.06)" }}
+      animate={{
+        scale: 1.02,
+        boxShadow: "0 20px 40px -8px oklch(0 0 0 / 0.2)",
+      }}
+      exit={{
+        scale: 1,
+        boxShadow: "0 2px 8px -2px oklch(0 0 0 / 0.06)",
+      }}
+      transition={{ duration: 0.2 }}
+    >
+      <h3 className="wb-sticky-heading">{item.heading}</h3>
+      {item.body && <p className="wb-sticky-body mt-1">{item.body}</p>}
+    </motion.div>
   )
 }
 
@@ -210,17 +358,17 @@ export function ClusterGrid({
   const config = { ...DEFAULT_LAYOUT_CONFIG, ...configOverride }
   const containerRef = useRef<HTMLDivElement>(null)
   const clusterRefs = useRef<Map<string, HTMLElement>>(new Map())
+  // Content refs point to the actual content container (where items are positioned)
+  // This is what Packery calls the "packer" area - the coordinate space for item positions
+  const contentRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const [dragState, setDragState] = useState<DragState | null>(null)
 
-  // Track measured bounds from each cluster
   const [measuredBounds, setMeasuredBounds] = useState<
     Record<string, { width: number; height: number }>
   >({})
 
-  // Track measured item heights per cluster (for accurate insert position calculation)
   const itemHeightsRef = useRef<Record<string, Map<string, number>>>({})
 
-  // Refs for current values (avoid stale closures)
   const dataRef = useRef(data)
   const dragStateRef = useRef(dragState)
 
@@ -232,23 +380,20 @@ export function ClusterGrid({
     dragStateRef.current = dragState
   }, [dragState])
 
-  // Handle bounds change from a cluster
   const handleBoundsChange = useCallback((clusterName: string, width: number, height: number) => {
     setMeasuredBounds((prev) => {
       const existing = prev[clusterName]
       if (existing && existing.width === width && existing.height === height) {
-        return prev // No change
+        return prev
       }
       return { ...prev, [clusterName]: { width, height } }
     })
   }, [])
 
-  // Handle item heights change from a cluster
   const handleItemHeightsChange = useCallback((clusterName: string, heights: Map<string, number>) => {
     itemHeightsRef.current[clusterName] = heights
   }, [])
 
-  // Calculate cluster positions using measured bounds
   const clusterPositions = useMemo(() => {
     const clusterData: Record<string, { at: [number, number]; contentWidth: number; contentHeight: number }> = {}
     for (const [name, cluster] of Object.entries(data.clusters)) {
@@ -262,7 +407,6 @@ export function ClusterGrid({
     return calculateClusterPositions(clusterData, config)
   }, [data.clusters, measuredBounds, config])
 
-  // Find cluster at point
   const findClusterAtPoint = useCallback((clientX: number, clientY: number): string | null => {
     for (const [name, element] of clusterRefs.current.entries()) {
       const rect = element.getBoundingClientRect()
@@ -273,7 +417,6 @@ export function ClusterGrid({
     return null
   }, [])
 
-  // Start drag
   const handlePointerDown = useCallback(
     (e: React.PointerEvent, item: ClusterGridItem, clusterName: string) => {
       const containerRect = containerRef.current?.getBoundingClientRect()
@@ -301,7 +444,6 @@ export function ClusterGrid({
     []
   )
 
-  // Pointer move during drag
   useEffect(() => {
     if (!dragState) return
 
@@ -312,23 +454,21 @@ export function ClusterGrid({
       const newX = e.clientX - containerRect.left - dragState.offsetX
       const newY = e.clientY - containerRect.top - dragState.offsetY
 
-      // Find which cluster we're over
       const clusterAtPoint = findClusterAtPoint(e.clientX, e.clientY)
 
-      // Calculate insert position within that cluster
       let insertPosition = dragState.insertPosition
       if (clusterAtPoint) {
-        const clusterElement = clusterRefs.current.get(clusterAtPoint)
-        const clusterRect = clusterElement?.getBoundingClientRect()
-        if (clusterRect) {
-          // Calculate dragged card's position relative to cluster content area
-          const dragCardLeft = e.clientX - dragState.offsetX - clusterRect.left
-          const dragCardTop = e.clientY - dragState.offsetY - clusterRect.top - 40 // Account for heading
+        // Use contentRef for position calculation - this is the actual coordinate space
+        // where items are positioned (like Packery's packer area)
+        const contentElement = contentRefs.current.get(clusterAtPoint)
+        const contentRect = contentElement?.getBoundingClientRect()
+        if (contentRect) {
+          // Calculate drag position relative to content area (like Packery subtracts padding)
+          const dragCardLeft = e.clientX - dragState.offsetX - contentRect.left
+          const dragCardTop = e.clientY - dragState.offsetY - contentRect.top
 
-          // Get layouts for this cluster (without ghost, without dragged item)
           const cluster = dataRef.current.clusters[clusterAtPoint]
           if (cluster) {
-            // Use measured heights for accurate positioning
             const clusterHeights = itemHeightsRef.current[clusterAtPoint]
             const itemsWithHeights = cluster.items
               .filter((i) => i.id !== dragState.itemId)
@@ -338,6 +478,7 @@ export function ClusterGrid({
                 height: clusterHeights?.get(item.id) || config.minItemHeight,
               }))
             const layouts = calculateItemLayouts(itemsWithHeights, config)
+            // Use top-left position like Packery does
             insertPosition = calculateInsertPosition(layouts, dragCardLeft, dragCardTop, config, dragState.itemHeight)
           }
         }
@@ -366,13 +507,11 @@ export function ClusterGrid({
       const { itemId, sourceCluster, currentCluster, insertPosition, sourcePosition } = state
 
       if (!currentCluster) {
-        // Dropped outside any cluster - no change
         setDragState(null)
         return
       }
 
       if (currentCluster === sourceCluster) {
-        // Reorder within same cluster
         const [newCol, newRow] = insertPosition
         const [oldCol, oldRow] = sourcePosition
 
@@ -392,18 +531,15 @@ export function ClusterGrid({
           })
         }
       } else {
-        // Cross-cluster transfer
         const sourceItems = currentData.clusters[sourceCluster]?.items || []
         const targetItems = currentData.clusters[currentCluster]?.items || []
         const itemToMove = sourceItems.find((i) => i.id === itemId)
 
         if (itemToMove) {
-          // Remove from source
           const newSourceItems = normalizePositions(
             sourceItems.filter((i) => i.id !== itemId)
           )
 
-          // Add to target at insert position, shifting others
           const newItem: ClusterGridItem = { ...itemToMove, at: insertPosition }
           const targetWithShifted = targetItems.map((item) => {
             const [col, row] = item.at
@@ -443,13 +579,11 @@ export function ClusterGrid({
     }
   }, [dragState, findClusterAtPoint, onDataChange, config])
 
-  // Context value
   const contextValue = useMemo<ClusterGridContextValue>(
     () => ({ dragState, config }),
     [dragState, config]
   )
 
-  // Get dragged item info for rendering
   const getDraggedItemInfo = () => {
     if (!dragState) return null
     const sourceCluster = data.clusters[dragState.sourceCluster]
@@ -457,7 +591,6 @@ export function ClusterGrid({
     const item = sourceCluster.items.find((i) => i.id === dragState.itemId)
     if (!item) return null
 
-    // Use target cluster color if hovering over different cluster
     const colorName =
       dragState.currentCluster && dragState.currentCluster !== dragState.sourceCluster
         ? DEFAULT_CLUSTER_COLORS[dragState.currentCluster] || "yellow"
@@ -476,7 +609,6 @@ export function ClusterGrid({
           const pos = clusterPositions[name] || { x: 0, y: 0 }
           const color = DEFAULT_CLUSTER_COLORS[name] || "yellow"
 
-          // Determine ghost position and height for this cluster
           let ghostAt: [number, number] | null = null
           let ghostHeight: number | null = null
           if (dragState?.currentCluster === name) {
@@ -484,22 +616,18 @@ export function ClusterGrid({
             ghostHeight = dragState.itemHeight
           }
 
-          // Exclude dragged item from its source cluster
           const excludeItemId = dragState?.sourceCluster === name ? dragState.itemId : null
 
           return (
-            <div
+            <motion.div
               key={name}
               ref={(el) => {
                 if (el) clusterRefs.current.set(name, el)
                 else clusterRefs.current.delete(name)
               }}
               className="absolute"
-              style={{
-                left: pos.x,
-                top: pos.y,
-                transition: "top 0.3s ease-out, left 0.3s ease-out",
-              }}
+              animate={{ x: pos.x, y: pos.y }}
+              transition={SPRING_CONFIG.layout}
             >
               <Cluster
                 name={name}
@@ -511,36 +639,27 @@ export function ClusterGrid({
                 onPointerDown={(e, item) => handlePointerDown(e, item, name)}
                 onBoundsChange={(w, h) => handleBoundsChange(name, w, h)}
                 onItemHeightsChange={(heights) => handleItemHeightsChange(name, heights)}
+                onContentRef={(el) => {
+                  if (el) contentRefs.current.set(name, el)
+                  else contentRefs.current.delete(name)
+                }}
               />
-            </div>
+            </motion.div>
           )
         })}
 
-        {/* Render dragged item at root level */}
-        {dragState && draggedItemInfo && (
-          <div
-            className="rounded-lg p-4 pointer-events-none"
-            style={{
-              position: "absolute",
-              left: dragState.currentX,
-              top: dragState.currentY,
-              width: dragState.itemWidth,
-              minHeight: config.minItemHeight,
-              backgroundColor: draggedItemInfo.colors.bg,
-              border: `1px solid ${draggedItemInfo.colors.border}`,
-              color: draggedItemInfo.colors.text,
-              boxShadow: "0 16px 32px -4px oklch(0 0 0 / 0.15)",
-              zIndex: 1000,
-              cursor: "grabbing",
-              transition: "background-color 0.15s, border-color 0.15s",
-            }}
-          >
-            <h3 className="wb-sticky-heading">{draggedItemInfo.item.heading}</h3>
-            {draggedItemInfo.item.body && (
-              <p className="wb-sticky-body mt-1">{draggedItemInfo.item.body}</p>
-            )}
-          </div>
-        )}
+        {/* Render dragged item with rubber band physics */}
+        <AnimatePresence>
+          {dragState && draggedItemInfo && (
+            <DraggedItem
+              key="dragged"
+              dragState={dragState}
+              item={draggedItemInfo.item}
+              colors={draggedItemInfo.colors}
+              config={config}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </ClusterGridContext.Provider>
   )

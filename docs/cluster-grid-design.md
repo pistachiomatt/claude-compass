@@ -10,10 +10,14 @@
 - Items fade in after measurement (no overlap flash)
 - Clusters report measured bounds to parent
 - Optimistic dropzone positioning
+- Masonry layout for clusters (columns stack independently)
+- 10% overlap threshold for insert position
+- Framer Motion animations (hover tilt, rubber-band drag, scale-in for new cards)
 
-**TODO:**
-- [x] **Clusters should use masonry layout** - Fixed! Each column now stacks independently.
-- [x] **Better insert threshold** - Now uses 10% overlap of dragged card's bottom edge, not pointer position.
+**Completed:**
+- [x] Clusters use masonry layout
+- [x] Better insert threshold (10% of target card height)
+- [x] Graceful animations with Framer Motion
 
 ---
 
@@ -78,15 +82,21 @@ function calculateClusterPositions(...) {
 
 ### Insert Position Calculation
 
-Uses 10% of target card height as threshold:
-- When dragged card's bottom is 10% into a target card, that card shifts down
-- Checks from bottom-up to find the furthest card we're 10% into
-- That card shifts, we insert at its row
+Uses Packery-style nearest-neighbor algorithm:
+1. Build list of valid insert targets (row 0 of each column + after each item)
+2. Calculate Euclidean distance from drag position to each target
+3. Snap to the nearest target
 
 ```typescript
-const threshold = targetCard.height * 0.1
-// If dragBottom > cardTop + threshold, that card shifts
+// Build targets: top of columns + after each item
+for (const item of colItems) {
+  targets.push({ col, row: item.row + 1, x: item.x, y: item.y + item.height })
+}
+// Find nearest using distance
+const distance = Math.sqrt(dx * dx + dy * dy)
 ```
+
+This is simpler and more intuitive than threshold-based logic.
 
 ---
 
@@ -102,9 +112,23 @@ const threshold = targetCard.height * 0.1
 
 5. **Ghost height**: Ghost placeholder must match dragged item's height, not `minItemHeight`.
 
-6. **Insert threshold**: Uses dragged card's bottom edge, not pointer. When 10% of the dragged card overlaps with a card below, that card shifts. This feels more natural than midpoint-based thresholds.
+6. **Insert position - use nearest neighbor**: Packery's approach is simpler than threshold logic. Pre-calculate valid drop targets, then snap to the nearest one using Euclidean distance. No complex threshold math needed.
 
 7. **Masonry for clusters**: Clusters should stack in columns independently, not align by rows. Same principle as items within clusters.
+
+8. **Use measured heights during drag**: When calculating insert position during drag, must use actual measured item heights (not `minItemHeight`). Track heights via `onItemHeightsChange` callback from each cluster.
+
+9. **Framer Motion springs**: Use high stiffness (400+) with good damping (35+) for snappy but not bouncy feel. Rubber-band drag uses `useSpring` with the target position updating each frame - the spring naturally lags behind creating the elastic effect.
+
+10. **ResizeObserver per-item registration**: Set up observer once on mount, then register/unregister each item via ref callback. Don't try to observe all refs in an effect - refs aren't populated yet when effect runs.
+
+11. **Content area ref for drag positioning**: When calculating drag position for insert detection, use a ref to the actual content container (where items are positioned), not the outer wrapper. Originally hardcoded a -40px offset for the heading, but this was inaccurate. Packery subtracts `size.paddingLeft/Top` from element position - we achieve the same by measuring relative to the content container directly. The content container is the coordinate space where items have their x/y positions.
+
+12. **Packery's exact algorithm**: For insert position, use Packery's approach exactly:
+    - Add targets at y=0 for each column (top of column)
+    - For each item: add target at item.y (top) AND item.y + item.height (bottom, NO gap)
+    - Deduplicate targets by x,y string key
+    - Find nearest target using Euclidean distance from dragged element's top-left position
 
 ---
 
@@ -114,4 +138,23 @@ const threshold = targetCard.height * 0.1
 
 2. **Test edge cases**: Single item clusters, empty clusters, many columns.
 
-3. **Consider animations**: Spring physics for drag release, FLIP for complex reorders.
+3. ~~**Consider animations**: Spring physics for drag release, FLIP for complex reorders.~~ ✓ Done - Using Framer Motion
+
+## Animation System
+
+Uses Framer Motion with gentle, graceful springs:
+
+```typescript
+const SPRING_CONFIG = {
+  layout: { stiffness: 400, damping: 35 },  // Card reordering
+  ghost: { stiffness: 300, damping: 30 },   // Ghost placeholder
+  enter: { stiffness: 350, damping: 25 },   // New cards
+}
+```
+
+**Effects:**
+- **Hover**: Subtle 1.5° rotation, elevated shadow
+- **Drag**: Rubber-band physics via useSpring, velocity-based rotation (±8°)
+- **New cards**: Scale in from 0.8 with AnimatePresence
+- **Reorder**: Smooth spring transitions on x/y
+- **Ghost**: Fades and scales in/out

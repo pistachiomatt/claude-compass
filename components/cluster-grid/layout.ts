@@ -197,8 +197,18 @@ export function calculateClusterPositions(
 
 /**
  * Find which [col, row] an item should be inserted at based on dragged card position.
- * Uses 10% of target card height as threshold - when dragged card's bottom is
- * 10% into a card, that card shifts down.
+ * Uses Packery-style nearest-neighbor: finds the closest valid insert position.
+ *
+ * Matches Packery's algorithm exactly:
+ * 1. Add targets at the top of each column (y=0)
+ * 2. For each item, add TWO targets:
+ *    - Top-left corner (take this item's place, push it down)
+ *    - Bottom-left corner (insert after this item, using exact bottom edge)
+ * 3. Deduplicate targets by x,y position
+ * 4. Find nearest target using Euclidean distance
+ *
+ * The dragX/dragY should be the TOP-LEFT position of the dragged element,
+ * relative to the content container (like Packery subtracts padding from element position).
  */
 export function calculateInsertPosition(
   layouts: ItemLayout[],
@@ -208,7 +218,6 @@ export function calculateInsertPosition(
   dragHeight?: number
 ): [number, number] {
   const { columnWidth, itemGap } = config
-  const effectiveHeight = dragHeight || config.minItemHeight
 
   // Filter out ghost from calculations
   const realItems = layouts.filter((item) => !item.isGhost)
@@ -220,45 +229,56 @@ export function calculateInsertPosition(
   // Find the max column in use
   const maxCol = Math.max(...realItems.map((item) => item.column))
 
-  // Calculate column from drag position
-  let col = Math.floor(dragX / (columnWidth + itemGap))
-  col = Math.max(0, Math.min(col, maxCol))
+  // Build list of valid insert targets (like Packery's shiftTargets)
+  // Use a Set to deduplicate targets by their x,y position (like Packery)
+  const targetKeys = new Set<string>()
+  const targets: Array<{ col: number; row: number; x: number; y: number }> = []
 
-  // Find items in this column
-  const colItems = realItems
-    .filter((item) => item.column === col)
-    .sort((a, b) => a.y - b.y)
-
-  if (colItems.length === 0) {
-    return [col, 0]
+  const addTarget = (col: number, row: number, x: number, y: number) => {
+    const key = `${x},${y}`
+    if (targetKeys.has(key)) return
+    targetKeys.add(key)
+    targets.push({ col, row, x, y })
   }
 
-  const dragBottom = dragY + effectiveHeight
-  const firstItem = colItems[0]
-  const lastItem = colItems[colItems.length - 1]
+  for (let col = 0; col <= maxCol; col++) {
+    const colItems = realItems
+      .filter((item) => item.column === col)
+      .sort((a, b) => a.y - b.y)
 
-  // If not yet 10% into the first item, insert at top
-  if (dragBottom <= firstItem.y + firstItem.height * 0.1) {
-    return [col, 0]
-  }
+    const colX = col * (columnWidth + itemGap)
 
-  // If past the last item entirely, insert after it
-  if (dragBottom > lastItem.y + lastItem.height) {
-    return [col, lastItem.row + 1]
-  }
+    // Always add a target at the top of each column (like Packery does)
+    addTarget(col, 0, colX, 0)
 
-  // Find the furthest card we're 10% into (check from bottom up)
-  // That card shifts down, we insert at its row
-  for (let i = colItems.length - 1; i >= 0; i--) {
-    const item = colItems[i]
-    const threshold = item.height * 0.1
-    if (dragBottom > item.y + threshold) {
-      return [col, item.row]
+    if (colItems.length > 0) {
+      // For each item, add TWO targets (like Packery):
+      for (const item of colItems) {
+        // 1. Top-left corner - take this item's place (it shifts down)
+        addTarget(col, item.row, item.x, item.y)
+
+        // 2. Bottom-left corner - insert after this item
+        // Like Packery, we use exact bottom edge (no gap added to target position)
+        addTarget(col, item.row + 1, item.x, item.y + item.height)
+      }
     }
   }
 
-  // Fallback - insert at top
-  return [col, 0]
+  // Find nearest target using Euclidean distance (like Packery)
+  let nearest = targets[0]
+  let minDistance = Infinity
+
+  for (const target of targets) {
+    const dx = target.x - dragX
+    const dy = target.y - dragY
+    const distance = Math.sqrt(dx * dx + dy * dy)
+    if (distance < minDistance) {
+      minDistance = distance
+      nearest = target
+    }
+  }
+
+  return [nearest.col, nearest.row]
 }
 
 /**
