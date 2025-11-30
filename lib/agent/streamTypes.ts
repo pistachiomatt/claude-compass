@@ -33,6 +33,14 @@ export interface StreamEventToolStart {
   toolName: string
 }
 
+export interface StreamEventToolInputDelta {
+  type: "tool_input_delta"
+  toolUseId: string
+  delta: string
+  // Accumulated input JSON string so far
+  argsText: string
+}
+
 export interface StreamEventToolProgress {
   type: "tool_progress"
   toolUseId: string
@@ -75,6 +83,7 @@ export type StreamEvent =
   | StreamEventTextDelta
   | StreamEventThinkingDelta
   | StreamEventToolStart
+  | StreamEventToolInputDelta
   | StreamEventToolProgress
   | StreamEventToolResult
   | StreamEventMessageComplete

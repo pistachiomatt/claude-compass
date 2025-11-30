@@ -11,19 +11,17 @@ import { skipToken } from "@tanstack/react-query"
 import type { StreamEvent } from "@/lib/agent/streamTypes"
 import type { ContentBlock } from "@/db/schema"
 
-interface ActiveTool {
-  toolUseId: string
-  toolName: string
-  elapsedSeconds?: number
-}
+// Streaming parts - maintains order as content streams in
+type StreamingPart =
+  | { type: "thinking"; text: string }
+  | { type: "text"; text: string }
+  | { type: "tool"; toolUseId: string; toolName: string; argsText: string; result?: string; elapsedSeconds?: number; isComplete: boolean }
 
 interface StreamingMessage {
   id: string
-  text: string
-  thinking: string
+  parts: StreamingPart[]
   contentBlocks: ContentBlock[]
   isComplete: boolean
-  activeTools: ActiveTool[]
 }
 
 interface SendMessageInput {
@@ -51,24 +49,40 @@ export function useChatStream(chatId: string) {
         case "init":
           setStreamingMessage({
             id: event.messageId,
-            text: "",
-            thinking: "",
+            parts: [],
             contentBlocks: [],
             isComplete: false,
-            activeTools: [],
           })
           break
 
         case "text_delta":
-          setStreamingMessage(prev =>
-            prev ? { ...prev, text: event.text } : prev,
-          )
+          // If last part is text, update it; otherwise add new text part
+          setStreamingMessage(prev => {
+            if (!prev) return prev
+            const parts = [...prev.parts]
+            const lastPart = parts[parts.length - 1]
+            if (lastPart?.type === "text") {
+              parts[parts.length - 1] = { type: "text", text: event.text }
+            } else {
+              parts.push({ type: "text", text: event.text })
+            }
+            return { ...prev, parts }
+          })
           break
 
         case "thinking_delta":
-          setStreamingMessage(prev =>
-            prev ? { ...prev, thinking: event.thinking } : prev,
-          )
+          // If last part is thinking, update it; otherwise add new thinking part
+          setStreamingMessage(prev => {
+            if (!prev) return prev
+            const parts = [...prev.parts]
+            const lastPart = parts[parts.length - 1]
+            if (lastPart?.type === "thinking") {
+              parts[parts.length - 1] = { type: "thinking", text: event.thinking }
+            } else {
+              parts.push({ type: "thinking", text: event.thinking })
+            }
+            return { ...prev, parts }
+          })
           break
 
         case "tool_start":
@@ -76,40 +90,50 @@ export function useChatStream(chatId: string) {
             prev
               ? {
                   ...prev,
-                  activeTools: [
-                    ...prev.activeTools,
-                    { toolUseId: event.toolUseId, toolName: event.toolName },
+                  parts: [
+                    ...prev.parts,
+                    { type: "tool", toolUseId: event.toolUseId, toolName: event.toolName, argsText: "", isComplete: false },
                   ],
                 }
               : prev,
           )
           break
 
+        case "tool_input_delta":
+          setStreamingMessage(prev => {
+            if (!prev) return prev
+            const parts = prev.parts.map(p =>
+              p.type === "tool" && p.toolUseId === event.toolUseId
+                ? { ...p, argsText: event.argsText }
+                : p,
+            )
+            return { ...prev, parts }
+          })
+          break
+
         case "tool_progress":
-          setStreamingMessage(prev =>
-            prev
-              ? {
-                  ...prev,
-                  activeTools: prev.activeTools.map(t =>
-                    t.toolUseId === event.toolUseId
-                      ? { ...t, elapsedSeconds: event.elapsedSeconds }
-                      : t,
-                  ),
-                }
-              : prev,
-          )
+          setStreamingMessage(prev => {
+            if (!prev) return prev
+            const parts = prev.parts.map(p =>
+              p.type === "tool" && p.toolUseId === event.toolUseId
+                ? { ...p, elapsedSeconds: event.elapsedSeconds }
+                : p,
+            )
+            return { ...prev, parts }
+          })
           break
 
         case "tool_result":
-          // Remove completed tool from active list
-          setStreamingMessage(prev =>
-            prev
-              ? {
-                  ...prev,
-                  activeTools: prev.activeTools.filter(t => t.toolUseId !== event.toolUseId),
-                }
-              : prev,
-          )
+          // Mark tool as complete and store result
+          setStreamingMessage(prev => {
+            if (!prev) return prev
+            const parts = prev.parts.map(p =>
+              p.type === "tool" && p.toolUseId === event.toolUseId
+                ? { ...p, isComplete: true, result: event.summary }
+                : p,
+            )
+            return { ...prev, parts }
+          })
           break
 
         case "message_complete":

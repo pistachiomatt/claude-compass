@@ -222,4 +222,5 @@ See `lib/env.server.ts` for typed env vars. You can't read .env\* files; the use
 - Headings and buttons should be in sentence case
 - **Pluralization and copy formatting**: Use the `pluralize` library for proper pluralization (e.g., "1 message", "5 messages"). Use `formatCountWithLabel()` from `@/lib/utils/humanReadable` for consistent number formatting with comma separators and proper pluralization. For human-readable durations, use `formatHumanReadableDuration()` which formats time spans in readable units like "1 year, 2 months".
 - When you update the design of the repo, update this file so future yous have context about the repo's architecture. Remember future yours don't have the benefit of the conversation history you have, so make sure use this file to ensure they can get up to speed.
-- Unless requested by the user, never put placeholder logic like "we'll do this simply for now and fix it later"
+- Unless requested by the user, never put placeholder logic like "we'll do this simply for now and fix it later".
+- On front-end, you can ONLY import @/db/schema with `type` because otherwise it'll bring in server components.

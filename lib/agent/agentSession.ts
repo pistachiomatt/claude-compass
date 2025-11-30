@@ -13,11 +13,7 @@ import {
   restoreTranscriptFile,
   readTranscriptFile,
 } from "./utils/sdkTranscript"
-import {
-  hydrateToTempDir,
-  syncFromTempDir,
-  diffFiles,
-} from "./utils/virtualFilesystem"
+import { hydrateToTempDir, syncFromTempDir, diffFiles } from "./utils/virtualFilesystem"
 import { setupVertexAuth } from "./utils/setupVertexAuth"
 import { MessageRole, type ContentBlock } from "@/db/schema"
 import { AgentTurnOptions, AgentTurnResult } from "./types"
@@ -102,7 +98,7 @@ export const agentSession = {
 
     // 5. Run SDK query
     let sdkSessionId = ""
-    let contentBlocks: ContentBlock[] = []
+    const contentBlocks: ContentBlock[] = [] // Accumulate ALL blocks across all assistant messages
     let usage: AgentTurnResult["usage"]
 
     const query = await getQuery()
@@ -130,9 +126,22 @@ export const agentSession = {
         sdkSessionId = message.session_id
       }
 
+      // Accumulate content blocks from ALL assistant messages
+      // In multi-turn scenarios: Turn 1 may have [thinking, tool_use], Turn 2 may have [text]
       if (message.type === "assistant") {
-        // Store raw content blocks as-is
-        contentBlocks = message.message.content as ContentBlock[]
+        const blocks = message.message.content as ContentBlock[]
+        contentBlocks.push(...blocks)
+      }
+
+      // Capture tool_result from user messages (SDK sends these automatically)
+      if (message.type === "user") {
+        const blocks = message.message.content as ContentBlock[]
+        // Only add tool_result blocks, not the original user text
+        for (const block of blocks) {
+          if (block.type === "tool_result") {
+            contentBlocks.push(block)
+          }
+        }
       }
 
       if (message.type === "result" && message.subtype === "success") {
@@ -144,7 +153,7 @@ export const agentSession = {
       }
     }
 
-    // 6. Persist assistant message with raw content blocks
+    // 6. Persist assistant message with ALL accumulated content blocks
     await chatRepository.createMessage({
       chatId,
       role: MessageRole.ASSISTANT,
@@ -190,7 +199,11 @@ export const agentSession = {
     userMessage: string,
     options: AgentTurnOptions = {},
   ): AsyncGenerator<StreamEvent> {
-    const { maxTurns = env.MAX_TURN_COUNT, model: _model = TARGET_MODEL, maxThinkingTokens } = options
+    const {
+      maxTurns = env.MAX_TURN_COUNT,
+      model: _model = TARGET_MODEL,
+      maxThinkingTokens,
+    } = options
     const model = toNativeModel(_model)
 
     // 1. Load chat with existing messages
@@ -222,10 +235,12 @@ export const agentSession = {
     // 4. Run SDK query (user message already saved by caller)
     const messageId = getUuid()
     let sdkSessionId = ""
-    let contentBlocks: ContentBlock[] = []
+    const allContentBlocks: ContentBlock[] = [] // Accumulate ALL blocks across all assistant messages
     let usage: AgentTurnResult["usage"]
     let accumulatedText = ""
     let accumulatedThinking = ""
+    const toolIndexToId = new Map<number, string>() // Map content block index → tool_use_id
+    const accumulatedToolInputs = new Map<string, string>() // Track input per tool_use_id
 
     const query = await getQuery()
     const response = query({
@@ -253,27 +268,65 @@ export const agentSession = {
           type: string
           index?: number
           content_block?: { type: string; id?: string; name?: string }
-          delta?: { type: string; text?: string; thinking?: string }
+          delta?: { type: string; text?: string; thinking?: string; partial_json?: string }
         }
 
         // Text delta
-        if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
+        if (
+          event.type === "content_block_delta" &&
+          event.delta?.type === "text_delta" &&
+          event.delta.text
+        ) {
           accumulatedText += event.delta.text
           yield { type: "text_delta", delta: event.delta.text, text: accumulatedText }
         }
 
         // Thinking delta (extended thinking)
-        if (event.type === "content_block_delta" && event.delta?.type === "thinking_delta" && event.delta.thinking) {
+        if (
+          event.type === "content_block_delta" &&
+          event.delta?.type === "thinking_delta" &&
+          event.delta.thinking
+        ) {
           accumulatedThinking += event.delta.thinking
-          yield { type: "thinking_delta", delta: event.delta.thinking, thinking: accumulatedThinking }
+          yield {
+            type: "thinking_delta",
+            delta: event.delta.thinking,
+            thinking: accumulatedThinking,
+          }
         }
 
         // Tool use start (from content_block_start)
         if (event.type === "content_block_start" && event.content_block?.type === "tool_use") {
+          const toolUseId = event.content_block.id || ""
+          // Track index → tool_use_id for input_json_delta events
+          if (event.index !== undefined) {
+            toolIndexToId.set(event.index, toolUseId)
+          }
           yield {
             type: "tool_start",
-            toolUseId: event.content_block.id || "",
+            toolUseId,
             toolName: event.content_block.name || "unknown",
+          }
+        }
+
+        // Tool input JSON delta
+        if (
+          event.type === "content_block_delta" &&
+          event.delta?.type === "input_json_delta" &&
+          event.delta.partial_json &&
+          event.index !== undefined
+        ) {
+          const toolUseId = toolIndexToId.get(event.index)
+          if (toolUseId) {
+            const current = accumulatedToolInputs.get(toolUseId) || ""
+            const updated = current + event.delta.partial_json
+            accumulatedToolInputs.set(toolUseId, updated)
+            yield {
+              type: "tool_input_delta",
+              toolUseId,
+              delta: event.delta.partial_json,
+              argsText: updated,
+            }
           }
         }
       }
@@ -293,11 +346,37 @@ export const agentSession = {
         }
       }
 
-      // Final assistant message - capture contentBlocks for DB persistence
-      // Note: text/thinking streaming is handled via stream_event above
-      // tool_start also comes from stream_event content_block_start
+      // Assistant message - ACCUMULATE contentBlocks from all assistant turns
+      // In multi-turn scenarios: Turn 1 may have [thinking, tool_use], Turn 2 may have [text]
+      // We want to collect ALL of them
       if (message.type === "assistant") {
-        contentBlocks = message.message.content as ContentBlock[]
+        const blocks = message.message.content as ContentBlock[]
+        allContentBlocks.push(...blocks)
+      }
+
+      // Capture tool_result from user messages (SDK sends these automatically)
+      if (message.type === "user") {
+        const blocks = message.message.content as ContentBlock[]
+        // Only add tool_result blocks, not the original user text
+        for (const block of blocks) {
+          if (block.type === "tool_result") {
+            allContentBlocks.push(block)
+            // Type assertion needed due to ContentBlock union including catch-all type
+            const toolResultBlock = block as {
+              tool_use_id: string
+              content: unknown
+              is_error?: boolean
+            }
+            yield {
+              type: "tool_result",
+              toolUseId: toolResultBlock.tool_use_id,
+              toolName: "", // Not available from tool_result block
+              isError: toolResultBlock.is_error === true,
+              summary:
+                typeof toolResultBlock.content === "string" ? toolResultBlock.content : undefined,
+            }
+          }
+        }
       }
 
       // Result
@@ -310,11 +389,11 @@ export const agentSession = {
       }
     }
 
-    // 5. Persist assistant message
+    // 5. Persist assistant message with ALL accumulated content blocks
     await chatRepository.createMessage({
       chatId,
       role: MessageRole.ASSISTANT,
-      contentBlocks,
+      contentBlocks: allContentBlocks,
     })
 
     // 6. Sync virtual filesystem
@@ -332,8 +411,8 @@ export const agentSession = {
       await chatRepository.updateSdkSessionId(chatId, sdkSessionId)
     }
 
-    // Yield final message
-    yield { type: "message_complete", messageId, contentBlocks, usage }
+    // Yield final message with ALL accumulated content blocks
+    yield { type: "message_complete", messageId, contentBlocks: allContentBlocks, usage }
     yield { type: "done" }
   },
 
