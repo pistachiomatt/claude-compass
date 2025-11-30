@@ -24,27 +24,44 @@ export function getTempPath(chatId: string): string {
 
 /**
  * Hydrate virtual files from DB to temp directory
- * Creates directories as needed and writes all files
+ * Only writes files that are missing or have changed content
+ * Returns the temp path and count of files written
  */
-export function hydrateToTempDir(chatId: string, files: VirtualFiles): string {
+export function hydrateToTempDir(
+  chatId: string,
+  files: VirtualFiles,
+): { tempPath: string; written: number; skipped: number } {
   const tempPath = getTempPath(chatId)
 
   // Ensure base directory exists
   mkdirSync(tempPath, { recursive: true })
 
-  // Write each file
+  let written = 0
+  let skipped = 0
+
+  // Write each file (only if missing or changed)
   for (const [relativePath, file] of Object.entries(files)) {
     const fullPath = join(tempPath, relativePath)
     const dir = dirname(fullPath)
+
+    // Check if file exists and matches
+    if (existsSync(fullPath)) {
+      const existingContent = readFileSync(fullPath, "utf-8")
+      if (existingContent === file.content) {
+        skipped++
+        continue
+      }
+    }
 
     // Create parent directories if needed
     mkdirSync(dir, { recursive: true })
 
     // Write file content
     writeFileSync(fullPath, file.content, "utf-8")
+    written++
   }
 
-  return tempPath
+  return { tempPath, written, skipped }
 }
 
 /**

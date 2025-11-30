@@ -23,6 +23,8 @@ import { existsSync, rmSync } from "fs"
 import { eq } from "drizzle-orm"
 import { getTempPath } from "../lib/agent/utils/virtualFilesystem"
 
+// Note: hydrateToTempDir now returns { tempPath, written, skipped } for efficiency
+
 // Extract text from content blocks
 function extractText(blocks: ContentBlock[]): string {
   return blocks

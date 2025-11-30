@@ -76,8 +76,10 @@ export const agentSession = {
     }
 
     // 3. Hydrate virtual filesystem to temp directory
-    const tempPath = hydrateToTempDir(chatId, chatData.files)
-    console.log(`Hydrated ${Object.keys(chatData.files).length} files to ${tempPath}`)
+    const { tempPath, written, skipped } = hydrateToTempDir(chatId, chatData.files)
+    if (written > 0 || skipped > 0) {
+      console.log(`Hydrated files: ${written} written, ${skipped} skipped`)
+    }
 
     // 4. Persist user message
     await chatRepository.createMessage({
