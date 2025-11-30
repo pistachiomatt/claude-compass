@@ -7,7 +7,7 @@
  * Uses ExternalStoreRuntime to provide a custom data source.
  */
 
-import { ReactNode, useMemo } from "react"
+import { ReactNode, useMemo, useEffect, useRef } from "react"
 import {
   useExternalStoreRuntime,
   AssistantRuntimeProvider,
@@ -25,10 +25,19 @@ interface ChatRuntimeProviderProps {
 
 export function ChatRuntimeProvider({ chatId, children }: ChatRuntimeProviderProps) {
   // Fetch persisted messages
-  const { data: dbMessages = [] } = trpc.chat.getMessages.useQuery(chatId)
+  const { data: dbMessages = [], isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(chatId)
 
   // Streaming state
-  const { sendMessage, isStreaming, streamingMessage, error } = useChatStream(chatId)
+  const { sendMessage, triggerOpening, isStreaming, streamingMessage, error } = useChatStream(chatId)
+
+  // Auto-trigger opening message for new chats (no messages yet)
+  const hasTriggeredOpening = useRef(false)
+  useEffect(() => {
+    if (!isLoadingMessages && dbMessages.length === 0 && !hasTriggeredOpening.current && !isStreaming) {
+      hasTriggeredOpening.current = true
+      triggerOpening()
+    }
+  }, [isLoadingMessages, dbMessages.length, isStreaming, triggerOpening])
 
   // Convert messages to assistant-ui format
   const messages = useMemo((): ThreadMessageLike[] => {

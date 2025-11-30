@@ -210,6 +210,7 @@ See `lib/env.server.ts` for typed env vars. You can't read .env\* files; the use
 
 # General advice
 
+- **DRY and conventions**: Don't write one-off inline logic when a reusable utility exists or should exist. Check `lib/` for existing utilities before writing inline code. React hooks go in `hooks/`. Server utilities go in `lib/`. If you're writing something that could be reused, make it a utility.
 - When you spot issues while exploring, add them to your todo list
 - **ALWAYS specify fields in Drizzle .select() queries**: Never use bare `db.select().from(table)`. Always use `db.select({ field1: table.field1, field2: table.field2 }).from(table)`. This prevents accidentally selecting sensitive fields, improves query performance, and makes code more maintainable by explicitly showing what data is needed.
 - **Use PostgreSQL JSONB operations for atomic updates**: When updating JSONB fields, use PostgreSQL's native JSONB operators instead of loading entire objects, modifying them in JavaScript, and updating. Use `sql`COALESCE(jsonb_field, '{}') || ${JSON.stringify(patch)}``for patching JSONB objects, or use the helper functions from`@/db/dbHelpers`for array operations:`jsonbArrayAdd()`, `jsonbArrayRemove()`, `jsonbArrayAppend()`, `jsonbArrayAppendMany()`, `jsonbArrayPrepend()`, `jsonbArrayContains()`, `jsonbArrayUpsert()`, `jsonbArrayRemoveByKey()`. This ensures atomic operations, prevents race conditions, and improves performance by avoiding round trips.

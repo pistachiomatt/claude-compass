@@ -38,6 +38,9 @@ export function useChatStream(chatId: string) {
     typeof skipToken | SendMessageInput
   >(skipToken)
 
+  // Opening message subscription (separate from regular messages)
+  const [openingInput, setOpeningInput] = useState<typeof skipToken | string>(skipToken)
+
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessage, setStreamingMessage] = useState<StreamingMessage | null>(null)
@@ -163,6 +166,7 @@ export function useChatStream(chatId: string) {
         case "done":
           setIsStreaming(false)
           setSubscriptionInput(skipToken)
+          setOpeningInput(skipToken)
           setStreamingMessage(null)
           break
 
@@ -170,6 +174,7 @@ export function useChatStream(chatId: string) {
           setError(event.error)
           setIsStreaming(false)
           setSubscriptionInput(skipToken)
+          setOpeningInput(skipToken)
           setStreamingMessage(null)
           break
       }
@@ -177,13 +182,28 @@ export function useChatStream(chatId: string) {
     [chatId, utils],
   )
 
-  // Subscribe to stream
+  // Subscribe to regular message stream
   trpc.chat.sendMessageStream.useSubscription(subscriptionInput, {
     onData: handleStreamEvent,
     onError: err => {
       setError(err.message)
       setIsStreaming(false)
       setSubscriptionInput(skipToken)
+      setStreamingMessage(null)
+    },
+    onStarted: () => {
+      setIsStreaming(true)
+      setError(null)
+    },
+  })
+
+  // Subscribe to opening message stream (shares same event handler)
+  trpc.chat.sendOpeningMessage.useSubscription(openingInput, {
+    onData: handleStreamEvent,
+    onError: err => {
+      setError(err.message)
+      setIsStreaming(false)
+      setOpeningInput(skipToken)
       setStreamingMessage(null)
     },
     onStarted: () => {
@@ -217,8 +237,15 @@ export function useChatStream(chatId: string) {
     [chatId, isStreaming, utils],
   )
 
+  // Trigger opening message (Claude speaks first)
+  const triggerOpening = useCallback(() => {
+    if (isStreaming) return
+    setOpeningInput(chatId)
+  }, [chatId, isStreaming])
+
   return {
     sendMessage,
+    triggerOpening,
     isStreaming,
     streamingMessage,
     error,

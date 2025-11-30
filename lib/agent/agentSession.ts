@@ -8,6 +8,7 @@
  */
 
 import { chatRepository } from "./utils/chatRepository"
+import { loadPrompt } from "./utils/loadPrompt"
 import {
   transcriptFileExists,
   restoreTranscriptFile,
@@ -102,12 +103,14 @@ export const agentSession = {
     let usage: AgentTurnResult["usage"]
 
     const query = await getQuery()
+    const systemPrompt = loadPrompt("systemPrompt.md")
     const response = query({
       prompt: userMessage,
       options: {
         model,
         maxTurns,
         cwd: tempPath,
+        systemPrompt,
         allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
         permissionMode: "bypassPermissions",
         ...(shouldResume && chatData.sdkSessionId ? { resume: chatData.sdkSessionId } : {}),
@@ -243,16 +246,18 @@ export const agentSession = {
     const accumulatedToolInputs = new Map<string, string>() // Track input per tool_use_id
 
     const query = await getQuery()
+    const systemPrompt = loadPrompt("systemPrompt.md")
     const response = query({
       prompt: userMessage,
       options: {
         model,
         maxTurns,
         cwd: tempPath,
+        systemPrompt,
         allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
         permissionMode: "bypassPermissions",
         includePartialMessages: true,
-        ...(maxThinkingTokens ? { maxThinkingTokens } : {}),
+        ...(maxThinkingTokens !== undefined ? { maxThinkingTokens } : {}),
         ...(shouldResume && chatData.sdkSessionId ? { resume: chatData.sdkSessionId } : {}),
       },
     })
