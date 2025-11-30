@@ -18,6 +18,9 @@ import {
 } from "@/lib/whiteboard/parseWhiteboardYml"
 import { Spinner } from "@/components/ui/spinner"
 
+const CHAT_WITHOUT_WHITEBOARD_WIDTH = "42rem"
+const CHAT_WITH_WHITEBOARD_WIDTH = 420
+
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
 
@@ -79,14 +82,17 @@ export default function ChatPage() {
         className="absolute inset-0 pointer-events-none"
         style={{
           backgroundImage: `radial-gradient(circle, oklch(0.7 0 0 / 0.3) 1px, transparent 1px)`,
-          backgroundSize: "24px 24px",
+          backgroundSize: "20px 20px",
         }}
       />
 
       <ChatHeader />
 
       {/* Whiteboard layer (ClusterGrid) */}
-      <div className="absolute inset-0 pt-16 overflow-auto">
+      <div
+        className="absolute inset-0 pt-16 overflow-auto"
+        style={{ paddingRight: `${CHAT_WITH_WHITEBOARD_WIDTH + 60}px` }}
+      >
         {clusterGridData && (
           <div className="p-8">
             <ClusterGrid data={clusterGridData} onDataChange={handleDataChange} />
@@ -106,8 +112,8 @@ export default function ChatPage() {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="absolute z-40 top-20 bottom-6"
         style={{
-          width: hasContent ? 420 : "100%",
-          maxWidth: hasContent ? 420 : "42rem",
+          width: hasContent ? CHAT_WITH_WHITEBOARD_WIDTH : "100%",
+          maxWidth: hasContent ? CHAT_WITH_WHITEBOARD_WIDTH : CHAT_WITHOUT_WHITEBOARD_WIDTH,
         }}
       >
         <div className="h-full rounded-2xl border bg-background/95 backdrop-blur-sm shadow-lg overflow-hidden">

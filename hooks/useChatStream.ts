@@ -159,8 +159,9 @@ export function useChatStream(chatId: string) {
               ? { ...prev, contentBlocks: event.contentBlocks, isComplete: true }
               : prev,
           )
-          // Refetch messages to get the persisted version
+          // Refetch messages and chat data (files may have been updated)
           utils.chat.getMessages.invalidate(chatId)
+          utils.chat.getById.invalidate(chatId)
           break
 
         case "done":
