@@ -19,13 +19,9 @@ export function ChatHeader() {
     <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-4">
       <div className="flex items-center gap-2">
         <Compass className="w-6 h-6 text-foreground" />
-        <span className="font-semibold text-lg">Compass</span>
+        <span className="font-semibold text-lg tracking-tight">Compass</span>
       </div>
       <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" disabled>
-          <FlaskConical className="w-4 h-4 mr-2" />
-          Research
-        </Button>
         <Button
           variant="outline"
           size="icon"
@@ -34,6 +30,11 @@ export function ChatHeader() {
           className="h-8 w-8"
         >
           <Plus className="w-4 h-4" />
+          New chat
+        </Button>
+        <Button variant="outline" size="sm" disabled>
+          <FlaskConical className="w-4 h-4 mr-2" />
+          Research
         </Button>
         <Avatar className="h-8 w-8">
           <AvatarFallback className="text-xs">U</AvatarFallback>

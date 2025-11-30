@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDownIcon, ArrowUpIcon, Mic, Square } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, Square } from "lucide-react"
 
 import {
   ComposerPrimitive,
@@ -18,6 +18,7 @@ import { ToolFallback } from "@/components/assistant-ui/tool-fallback"
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button"
 import { ComposerAttachments, UserMessageAttachments } from "@/components/assistant-ui/attachment"
 import { Compacting } from "@/components/assistant-ui/compacting"
+import { VoiceInputButton } from "@/components/assistant-ui/voice-input-button"
 import { useChatStreamState } from "@/components/chat/ChatStreamContext"
 
 export const Thread: FC = () => {
@@ -92,16 +93,7 @@ const Composer: FC = () => {
 const ComposerAction: FC = () => {
   return (
     <div className="aui-composer-action-wrapper relative mx-1 mt-2 mb-2 flex items-center justify-between">
-      <TooltipIconButton
-        tooltip="Voice input"
-        side="top"
-        variant="ghost"
-        size="icon"
-        className="size-[34px] rounded-full"
-        aria-label="Voice input"
-      >
-        <Mic className="size-5" />
-      </TooltipIconButton>
+      <VoiceInputButton />
 
       <ThreadPrimitive.If running={false}>
         <ComposerPrimitive.Send asChild>

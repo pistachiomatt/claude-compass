@@ -24,6 +24,9 @@ const schema = z.object({
   // Functionality config
   MAX_TURN_COUNT: z.coerce.number(),
   MAX_THINKING_TOKENS: z.coerce.number(),
+
+  // Deepgram
+  DEEPGRAM_API_KEY: z.string().optional(),
 })
 
 const rawEnv = {
@@ -52,6 +55,8 @@ const rawEnv = {
 
   MAX_TURN_COUNT: process.env.MAX_TURN_COUNT,
   MAX_THINKING_TOKENS: process.env.MAX_THINKING_TOKENS,
+
+  DEEPGRAM_API_KEY: process.env.DEEPGRAM_API_KEY,
 }
 
 // Check if validation should be disabled
