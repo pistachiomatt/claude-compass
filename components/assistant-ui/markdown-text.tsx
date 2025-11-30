@@ -1,19 +1,19 @@
-"use client";
+"use client"
 
-import "@assistant-ui/react-markdown/styles/dot.css";
+import "@assistant-ui/react-markdown/styles/dot.css"
 
 import {
   type CodeHeaderProps,
   MarkdownTextPrimitive,
   unstable_memoizeMarkdownComponents as memoizeMarkdownComponents,
   useIsMarkdownCodeBlock,
-} from "@assistant-ui/react-markdown";
-import remarkGfm from "remark-gfm";
-import { type FC, memo, useState } from "react";
-import { CheckIcon, CopyIcon } from "lucide-react";
+} from "@assistant-ui/react-markdown"
+import remarkGfm from "remark-gfm"
+import { type FC, memo, useState } from "react"
+import { CheckIcon, CopyIcon } from "lucide-react"
 
-import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
-import { cn } from "@/lib/utils";
+import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button"
+import { cn } from "@/lib/utils"
 
 const MarkdownTextImpl = () => {
   return (
@@ -22,49 +22,47 @@ const MarkdownTextImpl = () => {
       className="aui-md"
       components={defaultComponents}
     />
-  );
-};
+  )
+}
 
-export const MarkdownText = memo(MarkdownTextImpl);
+export const MarkdownText = memo(MarkdownTextImpl)
 
 const CodeHeader: FC<CodeHeaderProps> = ({ language, code }) => {
-  const { isCopied, copyToClipboard } = useCopyToClipboard();
+  const { isCopied, copyToClipboard } = useCopyToClipboard()
   const onCopy = () => {
-    if (!code || isCopied) return;
-    copyToClipboard(code);
-  };
+    if (!code || isCopied) return
+    copyToClipboard(code)
+  }
 
   return (
     <div className="aui-code-header-root mt-4 flex items-center justify-between gap-4 rounded-t-lg bg-muted-foreground/15 px-4 py-2 font-semibold text-foreground text-sm dark:bg-muted-foreground/20">
-      <span className="aui-code-header-language lowercase [&>span]:text-xs">
-        {language}
-      </span>
+      <span className="aui-code-header-language lowercase [&>span]:text-xs">{language}</span>
       <TooltipIconButton tooltip="Copy" onClick={onCopy}>
         {!isCopied && <CopyIcon />}
         {isCopied && <CheckIcon />}
       </TooltipIconButton>
     </div>
-  );
-};
+  )
+}
 
 const useCopyToClipboard = ({
   copiedDuration = 3000,
 }: {
-  copiedDuration?: number;
+  copiedDuration?: number
 } = {}) => {
-  const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [isCopied, setIsCopied] = useState<boolean>(false)
 
   const copyToClipboard = (value: string) => {
-    if (!value) return;
+    if (!value) return
 
     navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), copiedDuration);
-    });
-  };
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), copiedDuration)
+    })
+  }
 
-  return { isCopied, copyToClipboard };
-};
+  return { isCopied, copyToClipboard }
+}
 
 const defaultComponents = memoizeMarkdownComponents({
   h1: ({ className, ...props }) => (
@@ -79,7 +77,7 @@ const defaultComponents = memoizeMarkdownComponents({
   h2: ({ className, ...props }) => (
     <h2
       className={cn(
-        "aui-md-h2 scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight mt-8 mb-4 first:mt-0 last:mb-0",
+        "aui-md-h2 scroll-m-20 pb-2 text-3xl font-semibold mt-8 mb-4 first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -88,7 +86,7 @@ const defaultComponents = memoizeMarkdownComponents({
   h3: ({ className, ...props }) => (
     <h3
       className={cn(
-        "aui-md-h3 scroll-m-20 text-2xl font-semibold tracking-tight mt-6 mb-3 first:mt-0 last:mb-0",
+        "aui-md-h3 scroll-m-20 text-2xl font-semibold mt-6 mb-3 first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -97,7 +95,7 @@ const defaultComponents = memoizeMarkdownComponents({
   h4: ({ className, ...props }) => (
     <h4
       className={cn(
-        "aui-md-h4 scroll-m-20 text-xl font-semibold tracking-tight mt-5 mb-2 first:mt-0 last:mb-0",
+        "aui-md-h4 scroll-m-20 text-xl font-semibold mt-5 mb-2 first:mt-0 last:mb-0",
         className,
       )}
       {...props}
@@ -105,28 +103,19 @@ const defaultComponents = memoizeMarkdownComponents({
   ),
   h5: ({ className, ...props }) => (
     <h5
-      className={cn(
-        "aui-md-h5 text-lg font-semibold mt-4 mb-2 first:mt-0 last:mb-0",
-        className,
-      )}
+      className={cn("aui-md-h5 text-lg font-semibold mt-4 mb-2 first:mt-0 last:mb-0", className)}
       {...props}
     />
   ),
   h6: ({ className, ...props }) => (
     <h6
-      className={cn(
-        "aui-md-h6 text-base font-semibold mt-4 mb-2 first:mt-0 last:mb-0",
-        className,
-      )}
+      className={cn("aui-md-h6 text-base font-semibold mt-4 mb-2 first:mt-0 last:mb-0", className)}
       {...props}
     />
   ),
   p: ({ className, ...props }) => (
     <p
-      className={cn(
-        "aui-md-p leading-7 [&:not(:first-child)]:mt-4 last:mb-0",
-        className,
-      )}
+      className={cn("aui-md-p leading-6 [&:not(:first-child)]:mt-4 last:mb-0", className)}
       {...props}
     />
   ),
@@ -169,20 +158,14 @@ const defaultComponents = memoizeMarkdownComponents({
     />
   ),
   li: ({ className, ...props }) => (
-    <li
-      className={cn("aui-md-li leading-7", className)}
-      {...props}
-    />
+    <li className={cn("aui-md-li leading-7", className)} {...props} />
   ),
   hr: ({ className, ...props }) => (
     <hr className={cn("aui-md-hr my-6 border-muted", className)} {...props} />
   ),
   table: ({ className, ...props }) => (
     <div className="my-4 w-full overflow-auto">
-      <table
-        className={cn("aui-md-table w-full", className)}
-        {...props}
-      />
+      <table className={cn("aui-md-table w-full", className)} {...props} />
     </div>
   ),
   th: ({ className, ...props }) => (
@@ -204,31 +187,19 @@ const defaultComponents = memoizeMarkdownComponents({
     />
   ),
   tr: ({ className, ...props }) => (
-    <tr
-      className={cn(
-        "aui-md-tr m-0 even:bg-muted/50",
-        className,
-      )}
-      {...props}
-    />
+    <tr className={cn("aui-md-tr m-0 even:bg-muted/50", className)} {...props} />
   ),
   sup: ({ className, ...props }) => (
-    <sup
-      className={cn("aui-md-sup [&>a]:text-xs [&>a]:no-underline", className)}
-      {...props}
-    />
+    <sup className={cn("aui-md-sup [&>a]:text-xs [&>a]:no-underline", className)} {...props} />
   ),
   pre: ({ className, ...props }) => (
     <pre
-      className={cn(
-        "aui-md-pre overflow-x-auto rounded-b-lg bg-muted p-4 text-sm",
-        className,
-      )}
+      className={cn("aui-md-pre overflow-x-auto rounded-b-lg bg-muted p-4 text-sm", className)}
       {...props}
     />
   ),
   code: function Code({ className, ...props }) {
-    const isCodeBlock = useIsMarkdownCodeBlock();
+    const isCodeBlock = useIsMarkdownCodeBlock()
     return (
       <code
         className={cn(
@@ -238,7 +209,7 @@ const defaultComponents = memoizeMarkdownComponents({
         )}
         {...props}
       />
-    );
+    )
   },
   CodeHeader,
-});
+})

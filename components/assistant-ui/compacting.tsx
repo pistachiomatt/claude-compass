@@ -12,7 +12,7 @@ export const Compacting: FC<{ className?: string }> = ({ className }) => {
   return (
     <div
       className={cn(
-        "aui-compacting-root mb-4 flex items-center gap-2 py-2 text-muted-foreground text-sm",
+        "aui-compacting-root mb-4 flex items-center gap-2 py-2 font-sans text-muted-foreground text-sm",
         className,
       )}
       role="status"

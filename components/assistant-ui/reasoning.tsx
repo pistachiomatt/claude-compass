@@ -55,7 +55,7 @@ const ReasoningRoot: FC<
       ref={collapsibleRef}
       open={isOpen}
       onOpenChange={handleOpenChange}
-      className={cn("aui-reasoning-root mb-4 w-full", className)}
+      className={cn("aui-reasoning-root mb-4 w-full font-sans", className)}
       style={
         {
           "--animation-duration": `${ANIMATION_DURATION}ms`,

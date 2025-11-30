@@ -113,5 +113,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-wrap: pretty;
+  }
+  .font-serif {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: 0.005em; /* Slightly looser than the tightened sans */
+  }
+  .font-serif ::marker {
+    font-family: var(--font-work-sans), system-ui, sans-serif;
+    font-weight: 600;
   }
 }

@@ -7,6 +7,14 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-work-sans)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-anthropic-serif)', 'Georgia', 'serif'],
+        mono: ['var(--font-source-code-pro)', 'Menlo', 'monospace'],
+      },
+      letterSpacing: {
+        'tight-sans': '-0.01em', // ~0.1px tighter at 16px base
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
