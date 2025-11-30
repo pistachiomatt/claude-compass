@@ -6,7 +6,7 @@
  */
 
 import { db } from "@/db"
-import { chats, messages, MessageRole, type ContentBlock } from "@/db/schema"
+import { chats, messages, MessageRole, type ContentBlock, type VirtualFiles } from "@/db/schema"
 import { eq, asc } from "drizzle-orm"
 
 // ---------------------------------------------------------------------------
@@ -24,6 +24,7 @@ export interface ChatWithMessages {
   id: string
   name: string
   sdkSessionId: string | null
+  files: VirtualFiles
   messages: ChatMessage[]
 }
 
@@ -47,6 +48,7 @@ export const chatRepository = {
         id: chats.id,
         name: chats.name,
         sdkSessionId: chats.sdkSessionId,
+        files: chats.files,
         createdAt: chats.createdAt,
         updatedAt: chats.updatedAt,
       })
@@ -59,7 +61,7 @@ export const chatRepository = {
    * Get all messages for a chat
    */
   async getMessages(chatId: string): Promise<ChatMessage[]> {
-    return db
+    const rows = await db
       .select({
         id: messages.id,
         role: messages.role,
@@ -69,6 +71,11 @@ export const chatRepository = {
       .from(messages)
       .where(eq(messages.chatId, chatId))
       .orderBy(asc(messages.createdAt))
+
+    return rows.map(row => ({
+      ...row,
+      contentBlocks: row.contentBlocks ?? [],
+    }))
   },
 
   /**
@@ -83,6 +90,7 @@ export const chatRepository = {
       id: chat.id,
       name: chat.name,
       sdkSessionId: chat.sdkSessionId,
+      files: chat.files ?? {},
       messages: chatMessages,
     }
   },
@@ -135,7 +143,7 @@ export const chatRepository = {
    * Get the raw SDK transcript for restoration
    */
   async getTranscript(
-    chatId: string
+    chatId: string,
   ): Promise<{ sdkSessionId: string | null; sdkTranscript: string | null } | null> {
     return db
       .select({
@@ -145,5 +153,18 @@ export const chatRepository = {
       .from(chats)
       .where(eq(chats.id, chatId))
       .then(rows => rows[0] ?? null)
+  },
+
+  /**
+   * Update chat's virtual files
+   */
+  async updateFiles(chatId: string, files: VirtualFiles) {
+    return db
+      .update(chats)
+      .set({
+        files,
+        updatedAt: new Date(),
+      })
+      .where(eq(chats.id, chatId))
   },
 }

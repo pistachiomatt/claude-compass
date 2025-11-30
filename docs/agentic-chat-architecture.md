@@ -23,32 +23,37 @@ Compass is building a Claude.ai-like chat experience with an agentic backend. Us
 This section tracks the complete feature set we're building toward, in stages.
 
 ### Stage 1: MVP ✅ COMPLETE
+
 - [x] Install Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`)
 - [x] DB schema: `chats.sdkSessionId` added
 - [x] Service layer: `lib/services/agentSession.ts`
 - [x] tRPC routes: `chat.sendMessage`, `chat.getMessages`
 - [x] Basic flow: user message → SDK response → persist both
 - [x] SDK session ID stored in chat for future resume
-- [ ] Session resume from DB when SDK transcript is gone (Stage 2)
+- [x] Session resume from DB when SDK transcript is gone (Stage 2)
 
-### Stage 2: Virtual Filesystem
-- [ ] DB schema: `chatFiles` table
-- [ ] Temp directory hydration (`/tmp/compass/{chatId}/`)
-- [ ] File sync after each turn (temp dir → DB)
-- [ ] Enable Read/Write/Edit tools
+### Stage 2: Virtual Filesystem ✅ COMPLETE
+
+- [x] DB schema: `chats.files` JSONB column (simpler than separate table)
+- [x] Temp directory hydration (`/tmp/compass/{chatId}/`)
+- [x] File sync after each turn (temp dir → DB)
+- [x] Enable Read/Write/Edit/Glob/Grep tools
 
 ### Stage 3: Streaming
+
 - [ ] tRPC SSE subscription for streaming
 - [ ] Stream event types (text_delta, tool_call_start, etc.)
 - [ ] Real-time message updates during generation
 
 ### Stage 4: Frontend (assistant-ui)
+
 - [ ] Install assistant-ui
 - [ ] ExternalStoreRuntime adapter
 - [ ] Message components (text, tool calls, tool results)
 - [ ] Streaming UI updates
 
 ### Stage 5: Polish
+
 - [ ] Extended thinking UI (collapsible)
 - [ ] Error handling (rate limits, failures)
 - [ ] Cost tracking in DB
@@ -58,13 +63,13 @@ This section tracks the complete feature set we're building toward, in stages.
 
 ## Technology Stack
 
-| Layer | Technology |
-|-------|------------|
+| Layer    | Technology                      |
+| -------- | ------------------------------- |
 | Frontend | Next.js 14, React, assistant-ui |
-| API | tRPC v11 with SSE streaming |
-| Backend | Claude Agent SDK (TypeScript) |
-| Database | PostgreSQL via Drizzle ORM |
-| Hosting | Heroku (persistent dyno) |
+| API      | tRPC v11 with SSE streaming     |
+| Backend  | Claude Agent SDK (TypeScript)   |
+| Database | PostgreSQL via Drizzle ORM      |
+| Hosting  | Heroku (persistent dyno)        |
 
 ---
 
@@ -106,14 +111,14 @@ See: https://code.claude.com/docs/en/google-vertex-ai
 ### Core API
 
 ```typescript
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { query } from "@anthropic-ai/claude-agent-sdk"
 
 // Streaming mode (recommended)
 async function* generateMessages() {
   yield {
     type: "user" as const,
-    message: { role: "user" as const, content: "Hello" }
-  };
+    message: { role: "user" as const, content: "Hello" },
+  }
 }
 
 for await (const message of query({
@@ -124,22 +129,22 @@ for await (const message of query({
     allowedTools: ["Read", "Write", "Edit"],
     includePartialMessages: true, // For streaming text
     maxThinkingTokens: 10000, // For extended thinking
-  }
+  },
 })) {
   // message types: 'system' | 'assistant' | 'user' | 'result' | 'stream_event'
-  console.log(message);
+  console.log(message)
 }
 ```
 
 ### Message Types
 
-| Type | Description |
-|------|-------------|
-| `system` (subtype: `init`) | Session started, includes `session_id` |
-| `assistant` | Claude's response with content blocks |
-| `user` | User messages (echoed back) |
-| `stream_event` | Partial streaming chunks (when `includePartialMessages: true`) |
-| `result` | Final result with `success`/`error`, usage stats, cost |
+| Type                       | Description                                                    |
+| -------------------------- | -------------------------------------------------------------- |
+| `system` (subtype: `init`) | Session started, includes `session_id`                         |
+| `assistant`                | Claude's response with content blocks                          |
+| `user`                     | User messages (echoed back)                                    |
+| `stream_event`             | Partial streaming chunks (when `includePartialMessages: true`) |
+| `result`                   | Final result with `success`/`error`, usage stats, cost         |
 
 ### Session Management
 
@@ -149,8 +154,8 @@ const response = query({
   prompt: "Continue from where we left off",
   options: {
     resume: "session-xyz", // Session ID from previous conversation
-  }
-});
+  },
+})
 
 // Fork a session (creates new branch)
 const response = query({
@@ -158,8 +163,8 @@ const response = query({
   options: {
     resume: "session-xyz",
     forkSession: true,
-  }
-});
+  },
+})
 ```
 
 ---
@@ -201,6 +206,7 @@ The SDK is **stateless per-call**, not one instance per user:
 ### Alternative (Future) - Sandbox Containers
 
 For production scale with better isolation:
+
 - E2B, Modal, Cloudflare Sandboxes, Fly Machines
 - True filesystem per session
 - Better security isolation between users
@@ -225,14 +231,18 @@ Each chat thread needs its own isolated "filesystem" of markdown documents. User
 ```typescript
 // In db/schema.ts
 
-export const chatFiles = pgTable('chat_files', {
-  id: text('id').primaryKey().$defaultFn(() => getUuid()),
-  chatId: text('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  path: text('path').notNull(), // e.g., "notes/todo.md"
-  content: text('content').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+export const chatFiles = pgTable("chat_files", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => getUuid()),
+  chatId: text("chat_id")
+    .notNull()
+    .references(() => chats.id, { onDelete: "cascade" }),
+  path: text("path").notNull(), // e.g., "notes/todo.md"
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
 
 // Unique constraint on chatId + path
 ```
@@ -242,8 +252,8 @@ export const chatFiles = pgTable('chat_files', {
 Instead of temp directory sync, replace built-in tools with custom ones:
 
 ```typescript
-import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
-import { z } from "zod";
+import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk"
+import { z } from "zod"
 
 const filesystemServer = createSdkMcpServer({
   name: "compass-filesystem",
@@ -252,16 +262,16 @@ const filesystemServer = createSdkMcpServer({
       "read_file",
       "Read a file from the chat's virtual filesystem",
       { path: z.string() },
-      async (args) => {
+      async args => {
         const file = await db.query.chatFiles.findFirst({
-          where: and(eq(chatFiles.chatId, currentChatId), eq(chatFiles.path, args.path))
-        });
-        return { content: [{ type: "text", text: file?.content ?? "File not found" }] };
-      }
+          where: and(eq(chatFiles.chatId, currentChatId), eq(chatFiles.path, args.path)),
+        })
+        return { content: [{ type: "text", text: file?.content ?? "File not found" }] }
+      },
     ),
     // ... write_file, edit_file, list_files, etc.
-  ]
-});
+  ],
+})
 ```
 
 **Recommendation**: Start with temp directory sync (simpler), consider custom MCP tools if needed.
@@ -275,11 +285,12 @@ const filesystemServer = createSdkMcpServer({
 The Agent SDK stores sessions as **transcript files on the local filesystem** (see `transcript_path` in hook inputs). There is no built-in database adapter - this is by design for the CLI use case.
 
 Key insight from hook types:
+
 ```typescript
 type BaseHookInput = {
-  session_id: string;
-  transcript_path: string;  // Sessions stored as local files
-  cwd: string;
+  session_id: string
+  transcript_path: string // Sessions stored as local files
+  cwd: string
 }
 ```
 
@@ -288,12 +299,14 @@ type BaseHookInput = {
 Since SDK sessions are ephemeral (lost on dyno restart), we maintain our own persistent state:
 
 1. **Store in database** (always):
+
    - Chat metadata (id, title, createdAt)
    - Messages (role, content, toolCalls, toolResults)
    - SDK session ID (for potential resume while process is alive)
    - Virtual filesystem state
 
 2. **On session resume**:
+
    - Check if SDK session still exists locally (`resume: sdkSessionId`)
    - If yes → SDK handles context automatically
    - If no (dyno restarted) → Hydrate new SDK session with message history from DB
@@ -307,23 +320,29 @@ Since SDK sessions are ephemeral (lost on dyno restart), we maintain our own per
 ### Database Schema for Messages
 
 ```typescript
-export const messages = pgTable('messages', {
-  id: text('id').primaryKey().$defaultFn(() => getUuid()),
-  chatId: text('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  role: text('role', { enum: ['user', 'assistant', 'system'] }).notNull(),
-  content: jsonb('content').notNull(), // Anthropic content block format
-  sdkMessageUuid: text('sdk_message_uuid'), // For correlation
-  parentToolUseId: text('parent_tool_use_id'), // For tool result threading
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+export const messages = pgTable("messages", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => getUuid()),
+  chatId: text("chat_id")
+    .notNull()
+    .references(() => chats.id, { onDelete: "cascade" }),
+  role: text("role", { enum: ["user", "assistant", "system"] }).notNull(),
+  content: jsonb("content").notNull(), // Anthropic content block format
+  sdkMessageUuid: text("sdk_message_uuid"), // For correlation
+  parentToolUseId: text("parent_tool_use_id"), // For tool result threading
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
 
-export const chats = pgTable('chats', {
-  id: text('id').primaryKey().$defaultFn(() => getUuid()),
-  title: text('title'),
-  sdkSessionId: text('sdk_session_id'), // For SDK resume
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+export const chats = pgTable("chats", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => getUuid()),
+  title: text("title"),
+  sdkSessionId: text("sdk_session_id"), // For SDK resume
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
 ```
 
 ---
@@ -353,12 +372,12 @@ export const chatRouter = router({
 
 ```typescript
 type ChatStreamEvent =
-  | { type: 'text_delta'; delta: string }
-  | { type: 'thinking_delta'; delta: string }
-  | { type: 'tool_call_start'; toolName: string; toolCallId: string }
-  | { type: 'tool_call_complete'; toolCallId: string; result: unknown }
-  | { type: 'message_complete'; message: Message }
-  | { type: 'error'; error: string };
+  | { type: "text_delta"; delta: string }
+  | { type: "thinking_delta"; delta: string }
+  | { type: "tool_call_start"; toolName: string; toolCallId: string }
+  | { type: "tool_call_complete"; toolCallId: string; result: unknown }
+  | { type: "message_complete"; message: Message }
+  | { type: "error"; error: string }
 ```
 
 ---
@@ -373,42 +392,42 @@ assistant-ui expects messages in `ThreadMessageLike` format. The Agent SDK emits
 
 ```typescript
 type ThreadMessageLike = {
-  role: 'user' | 'assistant' | 'system';
-  content: string | MessagePart[];
-  id?: string;
-  createdAt?: Date;
-  status?: 'in_progress' | 'complete' | 'cancelled';
-};
+  role: "user" | "assistant" | "system"
+  content: string | MessagePart[]
+  id?: string
+  createdAt?: Date
+  status?: "in_progress" | "complete" | "cancelled"
+}
 
 type MessagePart =
-  | { type: 'text'; text: string }
-  | { type: 'tool-call'; toolCallId: string; toolName: string; args: unknown }
-  | { type: 'tool-result'; toolCallId: string; result: unknown };
+  | { type: "text"; text: string }
+  | { type: "tool-call"; toolCallId: string; toolName: string; args: unknown }
+  | { type: "tool-result"; toolCallId: string; result: unknown }
 ```
 
 ### Adapter Pattern
 
 ```typescript
 function convertSDKMessage(msg: SDKMessage): ThreadMessageLike | null {
-  if (msg.type === 'assistant') {
+  if (msg.type === "assistant") {
     return {
-      role: 'assistant',
+      role: "assistant",
       content: msg.message.content.map(block => {
-        if (block.type === 'text') {
-          return { type: 'text', text: block.text };
+        if (block.type === "text") {
+          return { type: "text", text: block.text }
         }
-        if (block.type === 'tool_use') {
+        if (block.type === "tool_use") {
           return {
-            type: 'tool-call',
+            type: "tool-call",
             toolCallId: block.id,
             toolName: block.name,
             args: block.input,
-          };
+          }
         }
         // ... handle other block types
       }),
       id: msg.uuid,
-    };
+    }
   }
   // ... handle other message types
 }
@@ -488,10 +507,11 @@ export const agentSession = {
    * Load chat with all messages for SDK hydration
    */
   async loadChatContext(chatId: string): Promise<ChatContext> {},
-};
+}
 ```
 
 This gives us:
+
 - **Single source of truth** for SDK ↔ DB logic
 - **Consistent file sync** before/after each turn
 - **Clean tRPC routes** that just call `agentSession.query()`
@@ -521,6 +541,7 @@ options: {
 **Question**: How do we display Claude's thinking process?
 
 The SDK supports `maxThinkingTokens` and streams thinking via `stream_event`. We need UI for:
+
 - Collapsible thinking section
 - Real-time thinking updates
 - Transition from thinking to response
@@ -528,6 +549,7 @@ The SDK supports `maxThinkingTokens` and streams thinking via `stream_event`. We
 ### 3. Error Handling
 
 **Question**: How do we handle:
+
 - SDK errors (API failures, rate limits)
 - Tool execution failures
 - Session timeout/expiration
@@ -535,6 +557,7 @@ The SDK supports `maxThinkingTokens` and streams thinking via `stream_event`. We
 ### 4. Cost Tracking
 
 The SDK provides usage stats in `SDKResultMessage`:
+
 ```typescript
 {
   type: 'result',
@@ -556,24 +579,28 @@ The SDK provides usage stats in `SDKResultMessage`:
 ## Implementation Phases
 
 ### Phase 1: Core Backend
+
 - [ ] Set up Agent SDK in tRPC route
 - [ ] Database schema for chats, messages, files
 - [ ] Basic send message → get response flow
 - [ ] Temp directory sync for virtual filesystem
 
 ### Phase 2: Streaming
+
 - [ ] tRPC SSE subscription for streaming responses
 - [ ] Stream event types and parsing
 - [ ] Text delta streaming
 - [ ] Tool call status streaming
 
 ### Phase 3: Frontend
+
 - [ ] assistant-ui integration
 - [ ] ExternalStoreRuntime adapter
 - [ ] Message components (text, tool calls, tool results)
 - [ ] Streaming UI updates
 
 ### Phase 4: Polish
+
 - [ ] Extended thinking UI
 - [ ] Error handling
 - [ ] Session resume from DB
@@ -584,6 +611,7 @@ The SDK provides usage stats in `SDKResultMessage`:
 ## Reference Links
 
 ### Claude Agent SDK
+
 - [Overview](https://platform.claude.com/docs/en/agent-sdk/overview)
 - [TypeScript Reference](https://platform.claude.com/docs/en/agent-sdk/typescript)
 - [Streaming vs Single Mode](https://platform.claude.com/docs/en/agent-sdk/streaming-vs-single-mode)
@@ -593,6 +621,7 @@ The SDK provides usage stats in `SDKResultMessage`:
 - [Hosting](https://platform.claude.com/docs/en/agent-sdk/hosting)
 
 ### assistant-ui
+
 - [Getting Started](https://www.assistant-ui.com/docs/getting-started)
 - [ExternalStoreRuntime](https://www.assistant-ui.com/docs/runtimes/custom/external-store)
 - [Thread Component](https://www.assistant-ui.com/docs/ui/Thread)
@@ -602,6 +631,7 @@ The SDK provides usage stats in `SDKResultMessage`:
 ## Compass Repo Context
 
 ### Existing Stack
+
 - **Frontend**: Next.js 14 (App Router)
 - **API**: tRPC v11
 - **Database**: PostgreSQL via Drizzle ORM
@@ -609,12 +639,14 @@ The SDK provides usage stats in `SDKResultMessage`:
 - **AI**: Anthropic Claude API (existing integration in `lib/api/anthropicApi.ts`)
 
 ### Key Files
+
 - `app/api/trpc/[trpc]/routers/` - tRPC routers
 - `db/schema.ts` - Drizzle schema (source of truth for types)
 - `lib/utils/getUuid.ts` - ID generation (16-char nanoid)
 - `app/chats/[id]/` - Chat detail page
 
 ### Conventions
+
 - All entity IDs use `getUuid()` (16-char nanoid)
 - tRPC uses `publicProcedure` (internal tool, no auth)
 - Types come from Drizzle schema, not redefined
@@ -622,4 +654,4 @@ The SDK provides usage stats in `SDKResultMessage`:
 
 ---
 
-*Last updated: 2025-11-29*
+_Last updated: 2025-11-30_

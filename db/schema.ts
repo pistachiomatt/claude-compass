@@ -14,6 +14,15 @@ export enum MessageRole {
 // Postgres Enums (automatically converted from TypeScript enums)
 export const roleEnum = pgEnum("role", enumToPgEnum(MessageRole))
 
+// Virtual filesystem file structure
+// Key is the relative path (e.g., "notes/todo.md")
+export interface VirtualFile {
+  content: string
+  updatedAt: string // ISO timestamp
+}
+
+export type VirtualFiles = Record<string, VirtualFile>
+
 // Tables
 export const users = pgTable(
   "users",
@@ -51,6 +60,9 @@ export const chats = pgTable(
     // Raw SDK transcript JSONL - stored verbatim for 1:1 hydration after process restart
     // This is the exact content of ~/.claude/projects/{path}/{sessionId}.jsonl
     sdkTranscript: text("sdk_transcript"),
+    // Virtual filesystem - markdown files Claude can read/write/edit
+    // Hydrated to temp dir before each turn, synced back after
+    files: safeJsonb("files").$type<VirtualFiles>().default({}),
     createdAt: timestamp("created_at", { withTimezone: true })
       .$defaultFn(() => new Date())
       .notNull(),

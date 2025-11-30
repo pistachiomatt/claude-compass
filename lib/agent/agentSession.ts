@@ -19,6 +19,11 @@ import {
   restoreTranscriptFile,
   readTranscriptFile,
 } from "./utils/sdkTranscript"
+import {
+  hydrateToTempDir,
+  syncFromTempDir,
+  diffFiles,
+} from "./utils/virtualFilesystem"
 import { MessageRole, type ContentBlock } from "@/db/schema"
 import { AgentTurnOptions, AgentTurnResult } from "./types"
 import { env } from "../env.server"
@@ -32,9 +37,11 @@ export const agentSession = {
    * Flow:
    * 1. Load chat and check for existing session/transcript
    * 2. Restore transcript file if needed (for resume after restart)
-   * 3. Run SDK query (resume if session exists, else fresh start)
-   * 4. Persist all new messages (user + assistant)
-   * 5. Save transcript to DB for future restoration
+   * 3. Hydrate virtual filesystem to temp directory
+   * 4. Run SDK query with Read/Write/Edit tools enabled
+   * 5. Persist all new messages (user + assistant)
+   * 6. Sync virtual filesystem changes back to DB
+   * 7. Save transcript to DB for future restoration
    */
   async runTurn(
     chatId: string,
@@ -68,14 +75,18 @@ export const agentSession = {
       }
     }
 
-    // 3. Persist user message
+    // 3. Hydrate virtual filesystem to temp directory
+    const tempPath = hydrateToTempDir(chatId, chatData.files)
+    console.log(`Hydrated ${Object.keys(chatData.files).length} files to ${tempPath}`)
+
+    // 4. Persist user message
     await chatRepository.createMessage({
       chatId,
       role: MessageRole.USER,
       contentBlocks: [{ type: "text", text: userMessage }],
     })
 
-    // 4. Run SDK query
+    // 5. Run SDK query
     let sdkSessionId = ""
     let contentBlocks: ContentBlock[] = []
     let usage: AgentTurnResult["usage"]
@@ -85,7 +96,8 @@ export const agentSession = {
       options: {
         model,
         maxTurns,
-        allowedTools: [],
+        cwd: tempPath,
+        allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
         permissionMode: "bypassPermissions",
         ...(shouldResume && chatData.sdkSessionId ? { resume: chatData.sdkSessionId } : {}),
       },
@@ -117,14 +129,24 @@ export const agentSession = {
       }
     }
 
-    // 5. Persist assistant message with raw content blocks
+    // 6. Persist assistant message with raw content blocks
     await chatRepository.createMessage({
       chatId,
       role: MessageRole.ASSISTANT,
       contentBlocks,
     })
 
-    // 6. Read transcript file and save to DB for future restoration
+    // 7. Sync virtual filesystem changes back to DB
+    const newFiles = syncFromTempDir(chatId)
+    const fileChanges = diffFiles(chatData.files, newFiles)
+    if (fileChanges.added.length || fileChanges.modified.length || fileChanges.deleted.length) {
+      await chatRepository.updateFiles(chatId, newFiles)
+      console.log(
+        `Synced files: +${fileChanges.added.length} ~${fileChanges.modified.length} -${fileChanges.deleted.length}`,
+      )
+    }
+
+    // 8. Read transcript file and save to DB for future restoration
     const transcriptContent = readTranscriptFile(sdkSessionId)
     if (transcriptContent) {
       await chatRepository.updateSdkSession(chatId, sdkSessionId, transcriptContent)
