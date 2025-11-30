@@ -9,6 +9,7 @@ import { ChatContainer } from "@/components/chat/ChatContainer"
 import { ChatHeader } from "@/components/chat/ChatHeader"
 import { ClusterGrid, type ClusterGridData } from "@/components/cluster-grid"
 import { useUpdateWhiteboard } from "@/hooks/useUpdateWhiteboard"
+import { useResizable } from "@/hooks/useResizable"
 import {
   parseWhiteboardYml,
   whiteboardYmlToClusterGridData,
@@ -20,7 +21,7 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 
 const CHAT_WITHOUT_WHITEBOARD_WIDTH = "42rem"
-const CHAT_WITH_WHITEBOARD_WIDTH = 420
+const CHAT_DOCKED_WIDTH = { default: 420, min: 320, max: 800 }
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
@@ -33,6 +34,13 @@ export default function ChatPage() {
   const [isChatHovered, setIsChatHovered] = useState(false)
   const [focusTrigger, setFocusTrigger] = useState(0)
   const [pendingFocus, setPendingFocus] = useState(false)
+
+  // Chat resize
+  const { width: chatWidth, handleResizeStart } = useResizable({
+    defaultWidth: CHAT_DOCKED_WIDTH.default,
+    minWidth: CHAT_DOCKED_WIDTH.min,
+    maxWidth: CHAT_DOCKED_WIDTH.max,
+  })
 
   // Parse whiteboard.yml from chat.files
   const { whiteboardYml, clusterGridData, hasContent } = useMemo(() => {
@@ -98,7 +106,7 @@ export default function ChatPage() {
       {/* Whiteboard layer (ClusterGrid) */}
       <div
         className="absolute inset-0 pt-16 overflow-auto"
-        style={{ paddingRight: `${CHAT_WITH_WHITEBOARD_WIDTH + 60}px` }}
+        style={{ paddingRight: hasContent ? `${chatWidth + 60}px` : undefined }}
       >
         {clusterGridData && (
           <div className="inline-block p-8">
@@ -119,8 +127,8 @@ export default function ChatPage() {
         transition={{ type: "spring", stiffness: 150, damping: 21 }}
         className="absolute z-40 top-20 bottom-6"
         style={{
-          width: hasContent ? CHAT_WITH_WHITEBOARD_WIDTH : "100%",
-          maxWidth: hasContent ? CHAT_WITH_WHITEBOARD_WIDTH : CHAT_WITHOUT_WHITEBOARD_WIDTH,
+          width: hasContent ? chatWidth : "100%",
+          maxWidth: hasContent ? chatWidth : CHAT_WITHOUT_WHITEBOARD_WIDTH,
         }}
         onHoverStart={() => setIsChatHovered(true)}
         onHoverEnd={() => setIsChatHovered(false)}
@@ -131,6 +139,14 @@ export default function ChatPage() {
           }
         }}
       >
+        {/* Resize handle on left edge (only when docked) */}
+        {hasContent && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize z-50 hover:bg-primary/10 active:bg-primary/20 transition-colors"
+            onMouseDown={handleResizeStart}
+          />
+        )}
+
         <div className="h-full rounded-3xl border bg-background shadow-lg overflow-hidden relative">
           {/* Hide button - appears on hover when chat is visible */}
           <AnimatePresence>
