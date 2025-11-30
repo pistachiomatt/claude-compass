@@ -13,7 +13,7 @@
  * - Request a public API from SDK team to get transcript location
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs"
+import { existsSync, readFileSync, writeFileSync, mkdirSync, realpathSync } from "fs"
 import { join } from "path"
 
 /**
@@ -22,10 +22,15 @@ import { join } from "path"
  *
  * This replicates the SDK's internal path construction.
  * See: BaseHookInput.transcript_path in sdk.d.ts
+ *
+ * Note: The SDK resolves symlinks (e.g., /var -> /private/var on macOS)
+ * and replaces both slashes and underscores with dashes.
  */
 export function getTranscriptDir(cwd: string = process.cwd()): string {
-  // SDK replaces slashes with dashes in the path
-  const sanitizedPath = cwd.replace(/\//g, "-")
+  // Resolve symlinks (e.g., /var -> /private/var on macOS)
+  const resolvedPath = realpathSync(cwd)
+  // SDK replaces slashes, underscores, and dots with dashes in the path
+  const sanitizedPath = resolvedPath.replace(/[/_.]/g, "-")
   return join(process.env.HOME || "", ".claude", "projects", sanitizedPath)
 }
 

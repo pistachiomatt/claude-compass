@@ -24,7 +24,9 @@ async function main() {
     const result = await agentSession.runTurn(chat.id, userMessage)
 
     console.log("\n✅ Agent responded!")
-    console.log(`   Content: ${result.content}`)
+    const textBlock = result.contentBlocks.find(b => b.type === "text")
+    const textContent = textBlock && "text" in textBlock ? textBlock.text : "[no text]"
+    console.log(`   Content: ${textContent}`)
     console.log(`   SDK Session ID: ${result.sdkSessionId}`)
     if (result.usage) {
       console.log(`   Tokens: ${result.usage.inputTokens} in / ${result.usage.outputTokens} out`)
@@ -36,7 +38,9 @@ async function main() {
     const storedMessages = await agentSession.getMessages(chat.id)
     console.log(`   Found ${storedMessages.length} messages:`)
     for (const msg of storedMessages) {
-      console.log(`   - [${msg.role}]: ${msg.content?.substring(0, 50)}...`)
+      const firstBlock = msg.contentBlocks[0]
+      const preview = firstBlock?.type === "text" ? (firstBlock as { text: string }).text.substring(0, 50) : "[no text]"
+      console.log(`   - [${msg.role}]: ${preview}...`)
     }
 
     // 4. Verify chat has SDK session ID

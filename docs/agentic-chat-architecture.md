@@ -39,11 +39,12 @@ This section tracks the complete feature set we're building toward, in stages.
 - [x] File sync after each turn (temp dir → DB)
 - [x] Enable Read/Write/Edit/Glob/Grep tools
 
-### Stage 3: Streaming
+### Stage 3: Streaming ✅ COMPLETE
 
-- [ ] tRPC SSE subscription for streaming
-- [ ] Stream event types (text_delta, tool_call_start, etc.)
-- [ ] Real-time message updates during generation
+- [x] tRPC SSE subscription for streaming (`sendMessageStream`)
+- [x] Stream event types (`lib/agent/streamTypes.ts`)
+- [x] Real-time message updates during generation
+- [x] Tool progress events (tool_start, tool_progress, tool_result)
 
 ### Stage 4: Frontend (assistant-ui)
 

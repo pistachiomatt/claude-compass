@@ -18,4 +18,5 @@ export interface AgentTurnResult {
 export interface AgentTurnOptions {
   maxTurns?: number
   model?: ClaudeModel
+  maxThinkingTokens?: number
 }
