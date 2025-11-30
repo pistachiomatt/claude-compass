@@ -131,3 +131,72 @@
     @apply font-mono text-sm whitespace-pre-wrap overflow-x-auto custom-tracking-tight;
   }
 }
+
+/* ===== Whiteboard Styles ===== */
+@layer components {
+  /* Cluster heading - matches aui-md-h1 style */
+  .wb-cluster-heading {
+    @apply text-lg font-semibold tracking-tight text-muted-foreground;
+  }
+
+  /* Sticky note typography */
+  .wb-sticky-heading {
+    @apply text-sm font-medium leading-snug;
+  }
+
+  .wb-sticky-body {
+    @apply text-xs leading-relaxed opacity-80 mt-1.5;
+  }
+
+  /* Dot grid background - super soft */
+  .wb-dot-grid {
+    --dot-color: oklch(0.75 0 0 / 0.25);
+    --dot-size: 1px;
+    --dot-gap: 24px;
+    background-image: radial-gradient(
+      circle at center,
+      var(--dot-color) var(--dot-size),
+      transparent var(--dot-size)
+    );
+    background-size: var(--dot-gap) var(--dot-gap);
+  }
+
+  .dark .wb-dot-grid {
+    --dot-color: oklch(0.5 0 0 / 0.2);
+  }
+
+  /* Peeking drawer for HMW/Questions */
+  .wb-peeking-drawer {
+    @apply fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t;
+    transform: translateY(calc(100% - 48px));
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .wb-peeking-drawer:hover,
+  .wb-peeking-drawer:focus-within {
+    transform: translateY(0);
+  }
+
+  .wb-peeking-drawer-handle {
+    @apply h-12 flex items-center justify-center gap-2 text-sm text-muted-foreground cursor-pointer;
+  }
+
+  /* Packery drop placeholder */
+  .packery-drop-placeholder {
+    outline: 3px dashed oklch(0.6 0.1 250 / 0.5);
+    outline-offset: -6px;
+    background: oklch(0.9 0.05 250 / 0.1);
+    border-radius: 0.5rem;
+    transition: transform 0.2s ease;
+  }
+
+  /* Dragging states */
+  .wb-item.is-dragging {
+    z-index: 100;
+    box-shadow: 0 16px 32px -4px oklch(0 0 0 / 0.15), 0 6px 12px -2px oklch(0 0 0 / 0.1);
+  }
+
+  .wb-item.is-positioning-post-drag {
+    z-index: 50;
+  }
+}
