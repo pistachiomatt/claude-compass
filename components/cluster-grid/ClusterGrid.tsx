@@ -394,7 +394,7 @@ export function ClusterGrid({
     itemHeightsRef.current[clusterName] = heights
   }, [])
 
-  const clusterPositions = useMemo(() => {
+  const { clusterPositions, totalBounds } = useMemo(() => {
     const clusterData: Record<string, { at: [number, number]; contentWidth: number; contentHeight: number }> = {}
     for (const [name, cluster] of Object.entries(data.clusters)) {
       const measured = measuredBounds[name]
@@ -404,7 +404,20 @@ export function ClusterGrid({
         contentHeight: measured?.height || config.minItemHeight,
       }
     }
-    return calculateClusterPositions(clusterData, config)
+    const positions = calculateClusterPositions(clusterData, config)
+
+    // Calculate total bounds for container sizing
+    let maxX = 0
+    let maxY = 0
+    for (const [name, pos] of Object.entries(positions)) {
+      const clusterInfo = clusterData[name]
+      if (clusterInfo) {
+        maxX = Math.max(maxX, pos.x + clusterInfo.contentWidth)
+        maxY = Math.max(maxY, pos.y + clusterInfo.contentHeight + 40) // +40 for heading
+      }
+    }
+
+    return { clusterPositions: positions, totalBounds: { width: maxX, height: maxY } }
   }, [data.clusters, measuredBounds, config])
 
   const findClusterAtPoint = useCallback((clientX: number, clientY: number): string | null => {
@@ -603,7 +616,14 @@ export function ClusterGrid({
 
   return (
     <ClusterGridContext.Provider value={contextValue}>
-      <div ref={containerRef} className={`relative ${className}`}>
+      <div
+        ref={containerRef}
+        className={`relative ${className}`}
+        style={{
+          minWidth: totalBounds.width || undefined,
+          minHeight: totalBounds.height || undefined,
+        }}
+      >
         {/* Render clusters */}
         {Object.entries(data.clusters).map(([name, cluster]) => {
           const pos = clusterPositions[name] || { x: 0, y: 0 }

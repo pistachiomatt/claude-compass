@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDownIcon, ArrowUpIcon, Square } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, Mic, Square } from "lucide-react"
 
 import {
   ComposerPrimitive,
@@ -16,11 +16,7 @@ import { MarkdownText } from "@/components/assistant-ui/markdown-text"
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning"
 import { ToolFallback } from "@/components/assistant-ui/tool-fallback"
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button"
-import {
-  ComposerAddAttachment,
-  ComposerAttachments,
-  UserMessageAttachments,
-} from "@/components/assistant-ui/attachment"
+import { ComposerAttachments, UserMessageAttachments } from "@/components/assistant-ui/attachment"
 import { Compacting } from "@/components/assistant-ui/compacting"
 import { useChatStreamState } from "@/components/chat/ChatStreamContext"
 
@@ -53,7 +49,7 @@ export const Thread: FC = () => {
           </div>
         )}
 
-        <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-4 flex w-full max-w-(--thread-max-width) flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
+        <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-4 flex w-full max-w-(--thread-max-width) flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-4">
           <Composer />
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Viewport>
@@ -81,8 +77,8 @@ const Composer: FC = () => {
       <ComposerPrimitive.AttachmentDropzone className="aui-composer-attachment-dropzone flex w-full flex-col rounded-3xl border border-input bg-background px-1 pt-2 shadow-xs outline-none transition-[color,box-shadow] has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-[3px] has-[textarea:focus-visible]:ring-ring/50 data-[dragging=true]:border-ring data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50 dark:bg-background">
         <ComposerAttachments />
         <ComposerPrimitive.Input
-          placeholder="Send a message..."
-          className="aui-composer-input mb-1 max-h-32 min-h-16 w-full resize-none bg-transparent px-3.5 pt-1.5 pb-3 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-0"
+          placeholder="Think with Claude..."
+          className="aui-composer-input mb-1 max-h-60 min-h-6 w-full resize-none bg-transparent px-3.5 pt-1.5 pb-3 outline-none placeholder:text-muted-foreground focus-visible:ring-0"
           rows={1}
           autoFocus
           aria-label="Message input"
@@ -96,7 +92,16 @@ const Composer: FC = () => {
 const ComposerAction: FC = () => {
   return (
     <div className="aui-composer-action-wrapper relative mx-1 mt-2 mb-2 flex items-center justify-between">
-      <ComposerAddAttachment />
+      <TooltipIconButton
+        tooltip="Voice input"
+        side="top"
+        variant="ghost"
+        size="icon"
+        className="size-[34px] rounded-full"
+        aria-label="Voice input"
+      >
+        <Mic className="size-5" />
+      </TooltipIconButton>
 
       <ThreadPrimitive.If running={false}>
         <ComposerPrimitive.Send asChild>

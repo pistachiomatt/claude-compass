@@ -225,7 +225,7 @@ Don't shift things around too quickly in one operation—the user will get disor
 
 Update the `stage` field when the collaboration shifts phases.
 
-Use your visual-spatial intelligence to PICTURE the whiteboard in your mind and position stickies so they cluster together naturally. For example, you don't want to make one long row of stickies, because they'll be hard to scan and fall off the screen.
+Use your visual-spatial intelligence to PICTURE the whiteboard in your mind and position stickies so they cluster together naturally. Your chat appears on 25% of the right side of the screen. For example, you don't want to make one long row of stickies or clusters, because they'll be hard to scan and fall off the screen.
 </how_to_update>
 
 <when_to_update>

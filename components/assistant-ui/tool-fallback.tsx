@@ -49,13 +49,35 @@ function getHeadings(
           active: `Updating ${fileName}...`,
           inactive: isCancelled ? `Cancelled: Update ${fileName}` : `Updated ${fileName}`,
         }
+      default:
+        return {
+          active: `Using ${toolName}...`,
+          inactive: isCancelled ? `Cancelled: ${toolName}` : `Used ${toolName}`,
+        }
     }
-  }
-
-  // Default headings
-  return {
-    active: `Using ${toolName}...`,
-    inactive: isCancelled ? `Cancelled: ${toolName}` : `Used ${toolName}`,
+  } else {
+    switch (toolName.toLowerCase()) {
+      case "write":
+        return {
+          active: `Writing...`,
+          inactive: isCancelled ? `Cancelled: Write` : `Wrote`,
+        }
+      case "read":
+        return {
+          active: `Reading...`,
+          inactive: isCancelled ? `Cancelled: Read` : `Read`,
+        }
+      case "edit":
+        return {
+          active: `Updating...`,
+          inactive: isCancelled ? `Cancelled: Update` : `Updated`,
+        }
+      default:
+        return {
+          active: `Using ${toolName}...`,
+          inactive: isCancelled ? `Cancelled: ${toolName}` : `Used ${toolName}`,
+        }
+    }
   }
 }
 

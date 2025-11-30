@@ -114,6 +114,7 @@
   body {
     @apply bg-background text-foreground;
     text-wrap: pretty;
+    font-size: 15px;
   }
   .font-serif {
     -webkit-font-smoothing: antialiased;
@@ -193,7 +194,9 @@
   /* Dragging states */
   .wb-item.is-dragging {
     z-index: 100;
-    box-shadow: 0 16px 32px -4px oklch(0 0 0 / 0.15), 0 6px 12px -2px oklch(0 0 0 / 0.1);
+    box-shadow:
+      0 16px 32px -4px oklch(0 0 0 / 0.15),
+      0 6px 12px -2px oklch(0 0 0 / 0.1);
   }
 
   .wb-item.is-positioning-post-drag {
