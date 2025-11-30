@@ -112,6 +112,7 @@ export interface StreamingMessageState {
   id: string
   parts: StreamingPart[]
   isComplete: boolean
+  isCompacting: boolean
 }
 
 type MessagePart =

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -23,10 +25,14 @@ import {
   ComposerAttachments,
   UserMessageAttachments,
 } from "@/components/assistant-ui/attachment";
+import { Compacting } from "@/components/assistant-ui/compacting";
+import { useChatStreamState } from "@/components/chat/ChatStreamContext";
 
 import { cn } from "@/lib/utils";
 
 export const Thread: FC = () => {
+  const { isCompacting } = useChatStreamState();
+
   return (
     <ThreadPrimitive.Root
       className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
@@ -48,6 +54,12 @@ export const Thread: FC = () => {
             AssistantMessage,
           }}
         />
+
+        {isCompacting && (
+          <div className="mx-auto w-full max-w-(--thread-max-width) py-4">
+            <Compacting />
+          </div>
+        )}
 
         <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mx-auto mt-4 flex w-full max-w-(--thread-max-width) flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
           <ThreadScrollToBottom />

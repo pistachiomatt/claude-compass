@@ -16,6 +16,7 @@ import {
 import { trpc } from "@/lib/trpc/client"
 import { useChatStream } from "@/hooks/useChatStream"
 import { convertMessage, convertStreamingMessage } from "@/lib/chat/messageConverter"
+import { ChatStreamProvider } from "./ChatStreamContext"
 
 interface ChatRuntimeProviderProps {
   chatId: string
@@ -67,13 +68,17 @@ export function ChatRuntimeProvider({ chatId, children }: ChatRuntimeProviderPro
     },
   })
 
+  const isCompacting = streamingMessage?.isCompacting ?? false
+
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      {children}
-      {/* Surface errors to children via context if needed */}
-      {error && (
-        <div className="hidden" data-chat-error={error} />
-      )}
+      <ChatStreamProvider isCompacting={isCompacting}>
+        {children}
+        {/* Surface errors to children via context if needed */}
+        {error && (
+          <div className="hidden" data-chat-error={error} />
+        )}
+      </ChatStreamProvider>
     </AssistantRuntimeProvider>
   )
 }

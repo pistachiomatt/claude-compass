@@ -22,6 +22,7 @@ interface StreamingMessage {
   parts: StreamingPart[]
   contentBlocks: ContentBlock[]
   isComplete: boolean
+  isCompacting: boolean
 }
 
 interface SendMessageInput {
@@ -52,6 +53,7 @@ export function useChatStream(chatId: string) {
             parts: [],
             contentBlocks: [],
             isComplete: false,
+            isCompacting: false,
           })
           break
 
@@ -134,6 +136,18 @@ export function useChatStream(chatId: string) {
             )
             return { ...prev, parts }
           })
+          break
+
+        case "compact_start":
+          setStreamingMessage(prev =>
+            prev ? { ...prev, isCompacting: true } : prev,
+          )
+          break
+
+        case "compact_complete":
+          setStreamingMessage(prev =>
+            prev ? { ...prev, isCompacting: false } : prev,
+          )
           break
 
         case "message_complete":

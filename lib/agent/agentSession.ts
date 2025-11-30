@@ -336,6 +336,25 @@ export const agentSession = {
         sdkSessionId = message.session_id
       }
 
+      // Compaction status - SDK sends status: 'compacting' when starting
+      if (message.type === "system" && message.subtype === "status") {
+        const statusMsg = message as { status: "compacting" | null }
+        if (statusMsg.status === "compacting") {
+          yield { type: "compact_start", trigger: "auto" }
+        }
+      }
+
+      // Compaction boundary - marks completion with metadata
+      if (message.type === "system" && message.subtype === "compact_boundary") {
+        const boundaryMsg = message as {
+          compact_metadata: { trigger: "manual" | "auto"; pre_tokens: number }
+        }
+        yield {
+          type: "compact_complete",
+          preTokens: boundaryMsg.compact_metadata.pre_tokens,
+        }
+      }
+
       // Tool progress
       if (message.type === "tool_progress") {
         yield {

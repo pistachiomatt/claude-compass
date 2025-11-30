@@ -57,6 +57,16 @@ export interface StreamEventToolResult {
   summary?: string
 }
 
+export interface StreamEventCompactStart {
+  type: "compact_start"
+  trigger: "manual" | "auto"
+}
+
+export interface StreamEventCompactComplete {
+  type: "compact_complete"
+  preTokens: number
+}
+
 export interface StreamEventMessageComplete {
   type: "message_complete"
   messageId: string
@@ -86,6 +96,8 @@ export type StreamEvent =
   | StreamEventToolInputDelta
   | StreamEventToolProgress
   | StreamEventToolResult
+  | StreamEventCompactStart
+  | StreamEventCompactComplete
   | StreamEventMessageComplete
   | StreamEventDone
   | StreamEventError
