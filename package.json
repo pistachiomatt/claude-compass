@@ -72,6 +72,7 @@
     "hypermd": "^0.3.11",
     "js-cookie": "^3.0.5",
     "lodash": "^4.17.21",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.428.0",
     "micromatch": "^4.0.8",
     "mongoose": "^8.5.4",

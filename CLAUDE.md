@@ -224,3 +224,4 @@ See `lib/env.server.ts` for typed env vars. You can't read .env\* files; the use
 - When you update the design of the repo, update this file so future yous have context about the repo's architecture. Remember future yours don't have the benefit of the conversation history you have, so make sure use this file to ensure they can get up to speed.
 - Unless requested by the user, never put placeholder logic like "we'll do this simply for now and fix it later".
 - On front-end, you can ONLY import @/db/schema with `type` because otherwise it'll bring in server components.
+- Never run npm build

@@ -1,4 +1,4 @@
-@import;
+@import "tw-shimmer";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -96,7 +96,7 @@
   .theme {
     --radius: 0.5rem;
     --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
-    --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+    --tracking-tight: calc(var(--tracking-normal) - 0.01em);
     --tracking-wide: calc(var(--tracking-normal) + 0.025em);
     --tracking-wider: calc(var(--tracking-normal) + 0.05em);
     --tracking-widest: calc(var(--tracking-normal) + 0.1em);
@@ -123,5 +123,8 @@
   .font-serif ::marker {
     font-family: var(--font-work-sans), system-ui, sans-serif;
     font-weight: 600;
+  }
+  .custom-tracking-tight {
+    letter-spacing: -0.01em;
   }
 }

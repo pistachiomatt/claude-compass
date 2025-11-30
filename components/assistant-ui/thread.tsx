@@ -1,37 +1,31 @@
-"use client";
+"use client"
 
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  Square,
-} from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Square } from "lucide-react"
 
 import {
   ComposerPrimitive,
   ErrorPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
-} from "@assistant-ui/react";
+} from "@assistant-ui/react"
 
-import type { FC } from "react";
+import type { FC } from "react"
 
-import { Button } from "@/components/ui/button";
-import { MarkdownText } from "@/components/assistant-ui/markdown-text";
-import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
-import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
-import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import { Button } from "@/components/ui/button"
+import { MarkdownText } from "@/components/assistant-ui/markdown-text"
+import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning"
+import { ToolFallback } from "@/components/assistant-ui/tool-fallback"
+import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button"
 import {
   ComposerAddAttachment,
   ComposerAttachments,
   UserMessageAttachments,
-} from "@/components/assistant-ui/attachment";
-import { Compacting } from "@/components/assistant-ui/compacting";
-import { useChatStreamState } from "@/components/chat/ChatStreamContext";
-
-import { cn } from "@/lib/utils";
+} from "@/components/assistant-ui/attachment"
+import { Compacting } from "@/components/assistant-ui/compacting"
+import { useChatStreamState } from "@/components/chat/ChatStreamContext"
 
 export const Thread: FC = () => {
-  const { isCompacting } = useChatStreamState();
+  const { isCompacting } = useChatStreamState()
 
   return (
     <ThreadPrimitive.Root
@@ -44,9 +38,7 @@ export const Thread: FC = () => {
         turnAnchor="top"
         className="aui-thread-viewport relative flex flex-1 flex-col overflow-x-auto overflow-y-scroll scroll-smooth px-4 pt-4"
       >
-        <ThreadPrimitive.If empty>
-          <ThreadWelcome />
-        </ThreadPrimitive.If>
+        <ThreadPrimitive.If empty>No messages yet</ThreadPrimitive.If>
 
         <ThreadPrimitive.Messages
           components={{
@@ -67,8 +59,8 @@ export const Thread: FC = () => {
         </ThreadPrimitive.ViewportFooter>
       </ThreadPrimitive.Viewport>
     </ThreadPrimitive.Root>
-  );
-};
+  )
+}
 
 const ThreadScrollToBottom: FC = () => {
   return (
@@ -81,80 +73,8 @@ const ThreadScrollToBottom: FC = () => {
         <ArrowDownIcon />
       </TooltipIconButton>
     </ThreadPrimitive.ScrollToBottom>
-  );
-};
-
-const ThreadWelcome: FC = () => {
-  return (
-    <div className="aui-thread-welcome-root mx-auto my-auto flex w-full max-w-(--thread-max-width) grow flex-col">
-      <div className="aui-thread-welcome-center flex w-full grow flex-col items-center justify-center">
-        <div className="aui-thread-welcome-message flex size-full flex-col justify-center px-8">
-          <div className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-2 animate-in font-semibold text-2xl duration-300 ease-out">
-            Hello there!
-          </div>
-          <div className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-2 animate-in text-2xl text-muted-foreground/65 delay-100 duration-300 ease-out">
-            How can I help you today?
-          </div>
-        </div>
-      </div>
-      <ThreadSuggestions />
-    </div>
-  );
-};
-
-const ThreadSuggestions: FC = () => {
-  return (
-    <div className="aui-thread-welcome-suggestions grid w-full @md:grid-cols-2 gap-2 pb-4">
-      {[
-        {
-          title: "What's the weather",
-          label: "in San Francisco?",
-          action: "What's the weather in San Francisco?",
-        },
-        {
-          title: "Explain React hooks",
-          label: "like useState and useEffect",
-          action: "Explain React hooks like useState and useEffect",
-        },
-        {
-          title: "Write a SQL query",
-          label: "to find top customers",
-          action: "Write a SQL query to find top customers",
-        },
-        {
-          title: "Create a meal plan",
-          label: "for healthy weight loss",
-          action: "Create a meal plan for healthy weight loss",
-        },
-      ].map((suggestedAction, index) => (
-        <div
-          key={`suggested-action-${suggestedAction.title}-${index}`}
-          className="aui-thread-welcome-suggestion-display fade-in slide-in-from-bottom-4 @md:nth-[n+3]:block nth-[n+3]:hidden animate-in fill-mode-both duration-300 ease-out"
-          style={{ animationDelay: `${index * 50}ms` }}
-        >
-          <ThreadPrimitive.Suggestion
-            prompt={suggestedAction.action}
-            send
-            asChild
-          >
-            <Button
-              variant="ghost"
-              className="aui-thread-welcome-suggestion h-auto w-full flex-1 @md:flex-col flex-wrap items-start justify-start gap-1 rounded-3xl border px-5 py-4 text-left text-sm dark:hover:bg-accent/60"
-              aria-label={suggestedAction.action}
-            >
-              <span className="aui-thread-welcome-suggestion-text-1 font-medium">
-                {suggestedAction.title}
-              </span>
-              <span className="aui-thread-welcome-suggestion-text-2 text-muted-foreground">
-                {suggestedAction.label}
-              </span>
-            </Button>
-          </ThreadPrimitive.Suggestion>
-        </div>
-      ))}
-    </div>
-  );
-};
+  )
+}
 
 const Composer: FC = () => {
   return (
@@ -171,8 +91,8 @@ const Composer: FC = () => {
         <ComposerAction />
       </ComposerPrimitive.AttachmentDropzone>
     </ComposerPrimitive.Root>
-  );
-};
+  )
+}
 
 const ComposerAction: FC = () => {
   return (
@@ -209,8 +129,8 @@ const ComposerAction: FC = () => {
         </ComposerPrimitive.Cancel>
       </ThreadPrimitive.If>
     </div>
-  );
-};
+  )
+}
 
 const MessageError: FC = () => {
   return (
@@ -219,8 +139,8 @@ const MessageError: FC = () => {
         <ErrorPrimitive.Message className="aui-message-error-message line-clamp-2" />
       </ErrorPrimitive.Root>
     </MessagePrimitive.Error>
-  );
-};
+  )
+}
 
 const AssistantMessage: FC = () => {
   return (
@@ -240,8 +160,8 @@ const AssistantMessage: FC = () => {
         <MessageError />
       </div>
     </MessagePrimitive.Root>
-  );
-};
+  )
+}
 
 const UserMessage: FC = () => {
   return (
@@ -257,5 +177,5 @@ const UserMessage: FC = () => {
         </div>
       </div>
     </MessagePrimitive.Root>
-  );
-};
+  )
+}
