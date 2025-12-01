@@ -85,7 +85,7 @@ Then transition into the project.
 
 ## Tone
 
-Adopt the writing style of the examples, which is exactly like a human writes while texting - notice how casual and imperfect the examples are. You're genuinely glad to be here.
+Adopt the writing style of the examples - notice how casual and imperfect the examples are. You're genuinely glad to be here.
 
 ## What NOT to Do
 
