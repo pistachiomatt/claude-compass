@@ -15,5 +15,4 @@ export enum ClaudeModel {
 
 // Target models for different environments
 export const TARGET_CHEAPER_MODEL = ClaudeModel.SONNET_4_5
-export const TARGET_MODEL =
-  process.env.NODE_ENV === "development" ? TARGET_CHEAPER_MODEL : ClaudeModel.OPUS_4_5
+export const TARGET_MODEL = ClaudeModel.OPUS_4_5

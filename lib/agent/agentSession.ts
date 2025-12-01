@@ -16,6 +16,8 @@ import {
 } from "./utils/sdkTranscript"
 import { hydrateToTempDir, syncFromTempDir, diffFiles } from "./utils/virtualFilesystem"
 import { setupVertexAuth } from "./utils/setupVertexAuth"
+import { validateWhiteboardHook } from "./hooks/validateWhiteboard"
+import { validateFilePathHook } from "./hooks/validateFilePath"
 import { MessageRole, type ContentBlock } from "@/db/schema"
 import { AgentTurnOptions, AgentTurnResult } from "./types"
 import type { StreamEvent } from "./streamTypes"
@@ -113,6 +115,9 @@ export const agentSession = {
         systemPrompt,
         allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
         permissionMode: "bypassPermissions",
+        hooks: {
+          PostToolUse: [{ hooks: [validateFilePathHook, validateWhiteboardHook] }],
+        },
         ...(shouldResume && chatData.sdkSessionId ? { resume: chatData.sdkSessionId } : {}),
       },
     })
@@ -257,6 +262,9 @@ export const agentSession = {
         allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
         permissionMode: "bypassPermissions",
         includePartialMessages: true,
+        hooks: {
+          PostToolUse: [{ hooks: [validateFilePathHook, validateWhiteboardHook] }],
+        },
         ...(maxThinkingTokens !== undefined ? { maxThinkingTokens } : {}),
         ...(shouldResume && chatData.sdkSessionId ? { resume: chatData.sdkSessionId } : {}),
       },

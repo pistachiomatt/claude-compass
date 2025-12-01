@@ -101,14 +101,20 @@ export function useDeepgramTranscription(options: UseDeepgramTranscriptionOption
 
     try {
       // Get microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          autoGainControl: false,
+          noiseSuppression: true,
+          echoCancellation: true,
+        },
+      })
       streamRef.current = stream
 
       // Create WebSocket connection to Deepgram
-      const socket = new WebSocket("wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true", [
-        "token",
-        config.apiKey,
-      ])
+      const socket = new WebSocket(
+        "wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&interim_results=true",
+        ["token", config.apiKey],
+      )
       socketRef.current = socket
 
       socket.onopen = () => {

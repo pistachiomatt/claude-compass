@@ -10,6 +10,7 @@ import { type StreamEvent } from "@/lib/agent/streamTypes"
 import { env } from "@/lib/env.server"
 import { hydrateToTempDir } from "@/lib/agent/utils/virtualFilesystem"
 import { loadPrompt } from "@/lib/agent/utils/loadPrompt"
+import { TARGET_CHEAPER_MODEL } from "@/app/types"
 
 export const chatRouter = router({
   getById: publicProcedure.input(z.string()).query(async ({ input }): Promise<Chat> => {
@@ -209,6 +210,7 @@ export const chatRouter = router({
       try {
         for await (const event of agentSession.runTurnStream(chatId, openingPrompt, {
           maxThinkingTokens: 0,
+          model: TARGET_CHEAPER_MODEL,
         })) {
           yield event
         }

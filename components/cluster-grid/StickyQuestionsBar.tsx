@@ -36,9 +36,18 @@ interface StickyQuestionCardProps {
 
 function StickyQuestionCard({ question, isNew }: StickyQuestionCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [hasEntered, setHasEntered] = useState(!isNew) // Track if entrance animation is done
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const colors = STICKY_COLORS[question.type]
   const rotation = getRandomRotation(question.id)
+
+  // Mark entrance complete after delay (so hover doesn't have delay)
+  useEffect(() => {
+    if (isNew && !hasEntered) {
+      const timer = setTimeout(() => setHasEntered(true), NEW_CARD_DELAY * 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [isNew, hasEntered])
 
   const handleHoverStart = () => {
     // Clear any pending hover-out
@@ -65,38 +74,28 @@ function StickyQuestionCard({ question, isNew }: StickyQuestionCardProps) {
     }
   }, [])
 
+  // Target y position - always responds to hover
+  const targetY = isHovered ? -HOVER_LIFT : 0
+
   return (
     <motion.div
       layout
       initial={
         isNew ? { opacity: 0, y: 80, rotate: rotation } : { opacity: 1, y: 0, rotate: rotation }
       }
-      animate={
-        isNew
-          ? {
-              opacity: 1,
-              y: [80, -25, 8, -3, 0], // Double bounce: overshoot up, bounce down, small up, settle
-              rotate: rotation,
-              transition: {
-                opacity: { duration: 0.15, delay: NEW_CARD_DELAY },
-                y: {
-                  delay: NEW_CARD_DELAY,
-                  duration: 0.7,
-                  times: [0, 0.4, 0.65, 0.85, 1],
-                  ease: "easeOut",
-                },
-              },
-            }
-          : {
-              opacity: 1,
-              y: isHovered ? -HOVER_LIFT : 0,
-              rotate: rotation,
-            }
-      }
+      animate={{
+        opacity: 1,
+        y: targetY,
+        rotate: rotation,
+      }}
       exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
       transition={{
-        layout: { type: "spring", stiffness: 400, damping: 30 },
-        y: { type: "spring", stiffness: 400, damping: 28 },
+        layout: { type: "spring", stiffness: 300, damping: 30 },
+        // Only apply entrance delay before hasEntered; after that, respond immediately
+        opacity: !hasEntered ? { duration: 0.15, delay: NEW_CARD_DELAY } : { duration: 0.15 },
+        y: !hasEntered
+          ? { type: "spring", stiffness: 300, damping: 12, delay: NEW_CARD_DELAY }
+          : { type: "spring", stiffness: 400, damping: 28 },
       }}
       className="rounded-lg p-3 cursor-default select-none shrink-0"
       style={{
