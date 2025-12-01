@@ -7,6 +7,7 @@
  * Key responsibility: SDK session management and hydration
  */
 
+import path from "path"
 import { chatRepository } from "./utils/chatRepository"
 import { loadPrompt } from "./utils/loadPrompt"
 import {
@@ -25,6 +26,18 @@ import { env } from "../env.server"
 import { toNativeModel } from "../api/anthropicApi"
 import { TARGET_MODEL } from "@/app/types"
 import getUuid from "../utils/getUuid"
+
+/**
+ * Get the path to the Claude Code CLI executable at runtime.
+ * Hardcoded for Heroku where the app runs from /app/.
+ */
+function getClaudeCodeExecutablePath(): string {
+  if (process.env.NODE_ENV === "production") {
+    return "/app/node_modules/@anthropic-ai/claude-agent-sdk/cli.js"
+  }
+  // Local dev - use path relative to project root
+  return path.join(process.cwd(), "node_modules/@anthropic-ai/claude-agent-sdk/cli.js")
+}
 
 // Lazy-load SDK after ensuring auth is set up
 // This avoids ESM import hoisting issues where SDK initializes before env vars are set
@@ -113,6 +126,7 @@ export const agentSession = {
         maxTurns,
         cwd: tempPath,
         systemPrompt,
+        pathToClaudeCodeExecutable: getClaudeCodeExecutablePath(),
         allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
         permissionMode: "bypassPermissions",
         hooks: {
@@ -259,6 +273,7 @@ export const agentSession = {
         maxTurns,
         cwd: tempPath,
         systemPrompt,
+        pathToClaudeCodeExecutable: getClaudeCodeExecutablePath(),
         allowedTools: ["Read", "Write", "Edit", "Glob", "Grep"],
         permissionMode: "bypassPermissions",
         includePartialMessages: true,
