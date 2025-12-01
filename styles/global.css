@@ -142,10 +142,10 @@
 @layer components {
   /* ===== Markdown Styles (for flowtoken AnimatedMarkdown) ===== */
   .aui-md h1 {
-    @apply scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mt-6 mb-4 first:mt-0 last:mb-0;
+    @apply scroll-m-20 text-4xl font-extrabold tracking-tight mt-6 mb-4 first:mt-0 last:mb-0;
   }
   .aui-md h2 {
-    @apply scroll-m-20 pb-2 text-3xl font-semibold mt-8 mb-4 first:mt-0 last:mb-0;
+    @apply scroll-m-20 text-2xl font-semibold mt-8 mb-4 first:mt-0 last:mb-0;
   }
   .aui-md h3 {
     @apply scroll-m-20 text-2xl font-semibold mt-6 mb-3 first:mt-0 last:mb-0;
@@ -169,13 +169,13 @@
     @apply mt-4 border-l-2 border-muted-foreground pl-6 italic text-muted-foreground;
   }
   .aui-md ul {
-    @apply my-4 ml-6 list-disc [&>li]:mt-2 marker:text-muted-foreground;
+    @apply my-4 ml-6 list-disc marker:text-muted-foreground;
   }
   .aui-md ol {
-    @apply my-4 ml-6 list-decimal [&>li]:mt-2 marker:text-muted-foreground;
+    @apply my-4 ml-6 list-decimal marker:text-muted-foreground;
   }
   .aui-md li {
-    @apply leading-7;
+    @apply leading-6;
   }
   .aui-md hr {
     @apply my-6 border-muted;

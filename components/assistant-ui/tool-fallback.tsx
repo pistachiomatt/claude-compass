@@ -6,6 +6,7 @@ import { CheckIcon, XCircleIcon } from "lucide-react"
 
 import { ActionCard } from "@/components/ui/action-card"
 import { Spinner } from "@/components/ui/spinner"
+import { useFileViewer } from "@/components/chat/FileViewerContext"
 
 /**
  * Parse args to extract filepath for file operations
@@ -88,6 +89,7 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
   status,
 }) => {
   const [isOptionHeld, setIsOptionHeld] = useState(false)
+  const fileViewer = useFileViewer()
 
   // Track Option/Alt key state
   useEffect(() => {
@@ -124,6 +126,24 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
         ? result
         : JSON.stringify(result, null, 2)
 
+  // Check if this is a clickable file tool (Write, Edit, Update)
+  const filePath = getFilePath(argsText)
+  const fileTools = ["write", "edit", "update"]
+  const isWhiteboardFile =
+    filePath?.endsWith("whiteboard.yml") || filePath?.endsWith("whiteboard.md")
+  const isClickable =
+    isComplete &&
+    fileTools.includes(toolName.toLowerCase()) &&
+    filePath &&
+    fileViewer &&
+    !isWhiteboardFile
+
+  const handleClick = () => {
+    if (isClickable && filePath) {
+      fileViewer.openFile(filePath)
+    }
+  }
+
   return (
     <ActionCard
       icon={icon}
@@ -133,8 +153,10 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
       isActive={isRunning}
       hasContent={true}
       className="aui-tool-fallback-root"
+      onClick={isClickable ? handleClick : undefined}
+      actionLabel={isClickable ? "View" : undefined}
     >
-      <div className="text-sm">
+      <div className="text-xs">
         <pre className="whitespace-pre-wrap overflow-x-auto font-mono">{argsText}</pre>
         {isOptionHeld && resultText && (
           <>

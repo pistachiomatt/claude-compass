@@ -2,14 +2,13 @@
 
 import { useParams } from "next/navigation"
 import { useMemo, useCallback, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ChevronDown, ChevronUp } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
-import { ChatContainer } from "@/components/chat/ChatContainer"
 import { ChatHeader } from "@/components/chat/ChatHeader"
+import { MindDialog } from "@/components/chat/MindDialog"
+import { FileViewerProvider } from "@/components/chat/FileViewerContext"
+import { FloatingPanels } from "@/components/chat/FloatingPanels"
 import { ClusterGrid, type ClusterGridData } from "@/components/cluster-grid"
 import { useUpdateWhiteboard } from "@/hooks/useUpdateWhiteboard"
-import { useResizable } from "@/hooks/useResizable"
 import {
   parseWhiteboardYml,
   whiteboardYmlToClusterGridData,
@@ -20,27 +19,14 @@ import {
 } from "@/lib/whiteboard/parseWhiteboardYml"
 import { Spinner } from "@/components/ui/spinner"
 
-const CHAT_WITHOUT_WHITEBOARD_WIDTH = "42rem"
-const CHAT_DOCKED_WIDTH = { default: 420, min: 320, max: 800 }
-
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
 
   const { data: chat, isLoading } = trpc.chat.getById.useQuery(id)
   const { updateWhiteboard } = useUpdateWhiteboard(id)
 
-  // Chat visibility state
-  const [isChatVisible, setIsChatVisible] = useState(true)
-  const [isChatHovered, setIsChatHovered] = useState(false)
-  const [focusTrigger, setFocusTrigger] = useState(0)
-  const [pendingFocus, setPendingFocus] = useState(false)
-
-  // Chat resize
-  const { width: chatWidth, handleResizeStart } = useResizable({
-    defaultWidth: CHAT_DOCKED_WIDTH.default,
-    minWidth: CHAT_DOCKED_WIDTH.min,
-    maxWidth: CHAT_DOCKED_WIDTH.max,
-  })
+  // Mind dialog state
+  const [isMindDialogOpen, setIsMindDialogOpen] = useState(false)
 
   // Parse whiteboard.yml from chat.files
   const { whiteboardYml, clusterGridData, hasContent } = useMemo(() => {
@@ -60,6 +46,9 @@ export default function ChatPage() {
       hasContent: hasWhiteboardContent(parsed),
     }
   }, [chat?.files])
+
+  // Extract mind.md content
+  const mindContent = chat?.files?.["mind.md"]?.content ?? ""
 
   // Handle cluster grid data changes (user drag-drop)
   const handleDataChange = useCallback(
@@ -91,101 +80,37 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Dot grid background */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `radial-gradient(circle, oklch(0.7 0 0 / 0.3) 1px, transparent 1px)`,
-          backgroundSize: "20px 20px",
-        }}
-      />
+    <FileViewerProvider files={chat.files ?? {}}>
+      <div className="relative h-screen w-screen overflow-hidden bg-background">
+        {/* Dot grid background */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(circle, oklch(0.7 0 0 / 0.3) 1px, transparent 1px)`,
+            backgroundSize: "20px 20px",
+          }}
+        />
 
-      <ChatHeader />
+        <ChatHeader onAvatarClick={() => setIsMindDialogOpen(true)} />
 
-      {/* Whiteboard layer (ClusterGrid) */}
-      <div
-        className="absolute inset-0 pt-16 overflow-auto"
-        style={{ paddingRight: hasContent ? `${chatWidth + 60}px` : undefined }}
-      >
-        {clusterGridData && (
-          <div className="inline-block p-8">
-            <ClusterGrid data={clusterGridData} onDataChange={handleDataChange} />
-          </div>
-        )}
-      </div>
+        <MindDialog
+          open={isMindDialogOpen}
+          onOpenChange={setIsMindDialogOpen}
+          content={mindContent}
+        />
 
-      {/* Floating chat thread */}
-      <motion.div
-        initial={false}
-        animate={{
-          x: hasContent ? 0 : "-50%",
-          left: hasContent ? "auto" : "50%",
-          right: hasContent ? 24 : "auto",
-          y: isChatVisible ? 0 : "calc(100% - 48px)",
-        }}
-        transition={{ type: "spring", stiffness: 150, damping: 21 }}
-        className="absolute z-40 top-20 bottom-6"
-        style={{
-          width: hasContent ? chatWidth : "100%",
-          maxWidth: hasContent ? chatWidth : CHAT_WITHOUT_WHITEBOARD_WIDTH,
-        }}
-        onHoverStart={() => setIsChatHovered(true)}
-        onHoverEnd={() => setIsChatHovered(false)}
-        onAnimationComplete={() => {
-          if (pendingFocus && isChatVisible) {
-            setFocusTrigger(n => n + 1)
-            setPendingFocus(false)
-          }
-        }}
-      >
-        {/* Resize handle on left edge (only when docked) */}
-        {hasContent && (
-          <div
-            className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize z-50 hover:bg-primary/10 active:bg-primary/20 transition-colors"
-            onMouseDown={handleResizeStart}
-          />
-        )}
-
-        <div className="h-full rounded-3xl border bg-background shadow-lg overflow-hidden relative">
-          {/* Hide button - appears on hover when chat is visible */}
-          <AnimatePresence>
-            {isChatVisible && isChatHovered && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                onClick={() => setIsChatVisible(false)}
-                className="absolute top-3 right-3 z-50 p-1.5 rounded-full bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronDown className="w-4 h-4" />
-              </motion.button>
-            )}
-          </AnimatePresence>
-
-          {/* Show button - visible when chat is hidden */}
-          <AnimatePresence>
-            {!isChatVisible && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => {
-                  setIsChatVisible(true)
-                  setPendingFocus(true)
-                }}
-                className="absolute inset-x-0 top-0 h-10 z-50 flex items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronUp className="w-4 h-4" />
-                <span className="text-xs font-medium">Show chat</span>
-              </motion.button>
-            )}
-          </AnimatePresence>
-
-          <ChatContainer chatId={id} className="h-full" focusTrigger={focusTrigger} />
+        {/* Whiteboard layer (ClusterGrid) */}
+        <div className="absolute inset-0 pt-16 overflow-auto">
+          {clusterGridData && (
+            <div className="inline-block p-8">
+              <ClusterGrid data={clusterGridData} onDataChange={handleDataChange} />
+            </div>
+          )}
         </div>
-      </motion.div>
-    </div>
+
+        {/* Floating panels (chat + research) */}
+        <FloatingPanels chatId={id} hasWhiteboardContent={hasContent} />
+      </div>
+    </FileViewerProvider>
   )
 }

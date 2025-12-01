@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic"
 import { Children, memo, useLayoutEffect, useRef, useState, type FC, type ReactNode } from "react"
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion"
+import { ArrowUpRight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -48,12 +49,7 @@ const ActionIcon: FC<{
   }
 
   if (Icon) {
-    return (
-      <Icon
-        className={cn("shrink-0 text-muted-foreground", className)}
-        style={sizeStyle}
-      />
-    )
+    return <Icon className={cn("shrink-0 text-muted-foreground", className)} style={sizeStyle} />
   }
 
   return null
@@ -178,6 +174,10 @@ export interface ActionCardProps {
   children: ReactNode
   /** Additional class names */
   className?: string
+  /** Optional click handler - when provided, header becomes a link-style button */
+  onClick?: () => void
+  /** Label for action button (e.g., "View") - shows button with arrow instead of chevron */
+  actionLabel?: string
 }
 
 /**
@@ -199,6 +199,8 @@ const ActionCardImpl: FC<ActionCardProps> = ({
   hasContent,
   children,
   className,
+  onClick,
+  actionLabel,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -233,12 +235,19 @@ const ActionCardImpl: FC<ActionCardProps> = ({
       {/* Header row */}
       <button
         type="button"
-        onClick={() => hasContent && setIsExpanded(!isExpanded)}
-        disabled={!hasContent}
+        onClick={() => {
+          if (onClick) {
+            onClick()
+          } else if (hasContent) {
+            setIsExpanded(!isExpanded)
+          }
+        }}
+        disabled={!hasContent && !onClick}
         className={cn(
           "flex w-full items-center gap-1 px-3 py-3",
-          hasContent && "cursor-pointer",
-          !hasContent && "cursor-default",
+          (hasContent || onClick) && "cursor-pointer",
+          !hasContent && !onClick && "cursor-default",
+          onClick && "hover:bg-muted/50 transition-colors",
         )}
       >
         <ActionIcon lottieData={lottieData} icon={icon} isActive={isActive} size={iconSize} />
@@ -255,24 +264,31 @@ const ActionCardImpl: FC<ActionCardProps> = ({
           )}
         </span>
 
-        {/* Expand/collapse indicator */}
-        {hasContent && (
-          <motion.svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="ml-auto text-muted-foreground"
-            animate={{ rotate: shouldExpand ? 180 : 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </motion.svg>
+        {/* Action button or expand/collapse indicator */}
+        {actionLabel ? (
+          <span className="ml-auto flex items-center gap-0.5 text-xs font-medium text-primary">
+            {actionLabel}
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </span>
+        ) : (
+          hasContent && (
+            <motion.svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="ml-auto text-muted-foreground"
+              animate={{ rotate: shouldExpand ? 180 : 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </motion.svg>
+          )
         )}
       </button>
 
