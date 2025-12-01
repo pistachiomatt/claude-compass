@@ -7,7 +7,7 @@ import { ChatHeader } from "@/components/chat/ChatHeader"
 import { MindDialog } from "@/components/chat/MindDialog"
 import { FileViewerProvider } from "@/components/chat/FileViewerContext"
 import { FloatingPanels } from "@/components/chat/FloatingPanels"
-import { ClusterGrid, type ClusterGridData } from "@/components/cluster-grid"
+import { ClusterGrid, StickyQuestionsBar, type ClusterGridData } from "@/components/cluster-grid"
 import { useUpdateWhiteboard } from "@/hooks/useUpdateWhiteboard"
 import {
   parseWhiteboardYml,
@@ -110,6 +110,14 @@ export default function ChatPage() {
 
         {/* Floating panels (chat + research) */}
         <FloatingPanels chatId={id} hasWhiteboardContent={hasContent} />
+
+        {/* Sticky questions bar (HMW + Open Questions) */}
+        {clusterGridData?.stickyQuestions && clusterGridData.stickyQuestions.length > 0 && (
+          <StickyQuestionsBar
+            questions={clusterGridData.stickyQuestions}
+            rightPadding={hasContent ? 460 : 0}
+          />
+        )}
       </div>
     </FileViewerProvider>
   )

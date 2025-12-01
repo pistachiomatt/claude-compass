@@ -11,7 +11,7 @@
  */
 
 import yaml from "js-yaml"
-import type { ClusterGridData, ClusterGridItem, ClusterGridCluster } from "@/components/cluster-grid"
+import type { ClusterGridData, ClusterGridItem, ClusterGridCluster, StickyQuestion } from "@/components/cluster-grid"
 
 export type WhiteboardStage = "DISCOVER" | "DEFINE" | "DEVELOP" | "DELIVER"
 
@@ -82,7 +82,45 @@ export function whiteboardYmlToClusterGridData(whiteboard: WhiteboardYml): Clust
     }
   }
 
-  return { clusters }
+  // Build sticky questions from hmw and open_questions (reversed - newest first)
+  const stickyQuestions: StickyQuestion[] = []
+
+  // Simple hash for stable IDs
+  const hashText = (text: string) => {
+    let hash = 0
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36)
+  }
+
+  // Add HMWs (reversed order - newest first)
+  if (whiteboard.hmw) {
+    const hmws = [...whiteboard.hmw].reverse()
+    hmws.forEach((text) => {
+      stickyQuestions.push({
+        id: `hmw-${hashText(text)}`,
+        text,
+        type: "hmw",
+      })
+    })
+  }
+
+  // Add open questions (reversed order - newest first)
+  if (whiteboard.open_questions) {
+    const questions = [...whiteboard.open_questions].reverse()
+    questions.forEach((text) => {
+      stickyQuestions.push({
+        id: `oq-${hashText(text)}`,
+        text,
+        type: "open_question",
+      })
+    })
+  }
+
+  return { clusters, stickyQuestions }
 }
 
 /**

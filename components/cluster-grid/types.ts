@@ -19,9 +19,17 @@ export interface ClusterGridCluster {
   items: ClusterGridItem[]
 }
 
+// Sticky question item (HMW or Open Question)
+export interface StickyQuestion {
+  id: string
+  text: string
+  type: "hmw" | "open_question"
+}
+
 // Full data model
 export interface ClusterGridData {
   clusters: Record<string, ClusterGridCluster>
+  stickyQuestions?: StickyQuestion[]
 }
 
 // Drag state during drag operation
