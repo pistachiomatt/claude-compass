@@ -1,9 +1,9 @@
 import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres"
+import { Pool } from "pg"
 import { env } from "@/lib/env.server"
 import chalk from "chalk"
 import { formatDbParams } from "./dbHelpers"
 import * as schema from "./schema"
-import fs from "fs"
 
 // Extract table name from SQL query
 function extractTableName(sql: string): string {
@@ -31,17 +31,17 @@ declare global {
   var db: NodePgDatabase<typeof schema> | undefined
 }
 
-const sslOptions = fs.existsSync("/app/rds-ca-bundle.pem")
-  ? {
-      ca: fs.readFileSync("/app/rds-ca-bundle.pem").toString(),
-    }
-  : undefined
+const createDb = () => {
+  const pool = new Pool({
+    connectionString: env.DATABASE_URL,
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : false,
+  })
 
-const createDb = () =>
-  drizzle(env.DATABASE_URL, {
+  return drizzle(pool, {
     schema,
-    // @ts-ignore
-    ssl: sslOptions,
     logger: {
       logQuery: (query: string, params: unknown[]) => {
         const queryId = ++queryCounter
@@ -77,6 +77,7 @@ const createDb = () =>
       },
     },
   })
+}
 
 export const db = globalThis.db ?? createDb()
 
