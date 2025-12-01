@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "24.11.1"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "PORT=3001 next dev & npm run dev:worker & npm run dev:drizzle-studio",

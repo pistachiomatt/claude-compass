@@ -2,7 +2,11 @@ import { useRouter } from "next/navigation"
 import { trpc } from "@/lib/trpc/client"
 import { useEffect, useRef } from "react"
 
-export function useCreateChat() {
+interface UseCreateChatOptions {
+  autoCreate?: boolean
+}
+
+export function useCreateChat({ autoCreate = false }: UseCreateChatOptions = {}) {
   const router = useRouter()
   const hasCreated = useRef(false)
 
@@ -13,11 +17,11 @@ export function useCreateChat() {
   })
 
   useEffect(() => {
-    if (!hasCreated.current) {
+    if (autoCreate && !hasCreated.current) {
       hasCreated.current = true
       createChat()
     }
-  }, [createChat])
+  }, [autoCreate, createChat])
 
-  return { isPending }
+  return { createChat, isPending }
 }

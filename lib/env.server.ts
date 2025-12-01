@@ -76,11 +76,3 @@ if (shouldDisableChecks) {
 
 export type Env = z.infer<typeof schema>
 export const env: Env = parsedEnv as Env
-
-// Add aliases for backward compatibility
-Object.defineProperty(env, "INSTANT_GROUPS", {
-  get() {
-    return this.INSTANT_RESPONSE_GROUP_IDS
-  },
-  enumerable: true,
-})
