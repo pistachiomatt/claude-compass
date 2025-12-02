@@ -10,6 +10,55 @@ A Claude-powered chat experience with a collaborative whiteboard UI. Chat with C
 - NextJS
 - Claude Agent SDK
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Frontend (Next.js)                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐  │
+│  │ ChatContainer│  │ ClusterGrid  │  │ Thread (assistant-ui) │  │
+│  └──────┬───────┘  └──────────────┘  └───────────────────────┘  │
+│         │ useChatStream                                         │
+│         ▼                                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ tRPC Client (subscriptions for streaming)                │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Backend (tRPC)                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ chat.router.ts (sendMessageStream, updateWhiteboard)     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ agentSession.ts (Claude Agent SDK orchestration)         │   │
+│  │  • Hydrates virtual filesystem to temp dir               │   │
+│  │  • Runs SDK with Read/Write/Edit tools                   │   │
+│  │  • Streams events back to client                         │   │
+│  │  • Syncs file changes back to DB                         │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ chatRepository.ts (Drizzle ORM)                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   PostgreSQL    │
+                    │  (chats, msgs,  │
+                    │   virtual files)│
+                    └─────────────────┘
+```
+
+- `./components/cluster-grid` is the React sticky notes whiteboard. It renders the whiteboard in schematised YML format that Claude also maintains.
+- `./lib/agent/agentSession.ts` is a thin wrapper around the Claude Agent SDK which handles all the agentic AI logic.
+- Whiteboard: Claude has a filesystem per chat synced between the tmp filesystem and the database (virtually storing the filesystem). When Claude edits `whiteboard.yml`, the UI renders it as draggable sticky notes. Users can drag items around, which writes back to the file - so Claude sees the updated positions on its next turn.
+
 ## Setup
 
 1. **Install dependencies**
