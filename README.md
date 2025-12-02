@@ -105,5 +105,4 @@ npm run dev
 This starts:
 
 - Next.js on http://localhost:3001
-- Background worker for job processing
 - Drizzle Studio on http://localhost:3801 (database UI)

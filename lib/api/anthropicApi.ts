@@ -35,16 +35,14 @@ const createVertexClient = () => {
 
 /**
  * Convert model name to native Anthropic format
- * Handles both ClaudeModel enum values and legacy string formats
+ * Handles both ClaudeModel enum values
  */
 export function toNativeModel(model: string | ClaudeModel): string {
-  // If it's already a ClaudeModel enum value, return as-is
   if (Object.values(ClaudeModel).includes(model as ClaudeModel)) {
     return model
+  } else {
+    throw new Error(`Unsupported model: ${model}`)
   }
-
-  // Handle legacy bedrock format conversion
-  return model.replace("us.anthropic.", "").replace("-v1:0", "").replace("-v2:0", "")
 }
 
 /**

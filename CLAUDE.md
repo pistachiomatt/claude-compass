@@ -114,7 +114,6 @@ This is an internal tool, not a production app - we use `publicProcedure` for al
 - **Frontend**: Next.js 14 (App Router)
 - **API Layer**: tRPC v11
 - **Database**: PostgreSQL via Drizzle ORM
-- **Background Jobs**: BullMQ with Redis
 - **Process Manager**: PM2 (see `ecosystem.config.js`)
 - **AI**: Anthropic Claude API
 
@@ -141,14 +140,8 @@ db/                       # Database layer
 hooks/                    # React hooks
   useCreateChat.ts        # Example: mutation + redirect pattern
 
-jobs/                     # Background job processing
-  queue.ts                # BullMQ queue setup
-  worker.ts               # Job worker (runs via PM2)
-  types.ts                # Job type definitions
-
 lib/
   api/                    # External API clients
-    anthropicApi.ts       # Claude API wrapper
   trpc/
     client.ts             # tRPC client setup (works with App Router)
     transformer.ts        # SuperJSON transformer

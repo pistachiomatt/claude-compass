@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import type { ToolCallMessagePartComponent } from "@assistant-ui/react"
 import { CheckIcon, XCircleIcon } from "lucide-react"
 
 import { ActionCard } from "@/components/ui/action-card"
 import { Spinner } from "@/components/ui/spinner"
 import { useFileViewer } from "@/components/chat/FileViewerContext"
+import { useAltKeyHeld } from "@/hooks/useAltKeyHeld"
 
 /**
  * Parse args to extract filepath for file operations
@@ -20,65 +20,38 @@ function getFilePath(argsText: string): string | null {
   }
 }
 
-/**
- * Generate headings based on tool name and args
- */
+// Tool display config: [activeVerb, pastVerb, preposition?]
+const TOOL_VERBS: Record<string, [string, string, string?]> = {
+  write: ["Writing", "Wrote", "to"],
+  read: ["Reading", "Read"],
+  edit: ["Updating", "Updated"],
+  update: ["Updating", "Updated"],
+}
+
+const FILE_TOOLS = ["write", "edit", "update"]
+
 function getHeadings(
   toolName: string,
   argsText: string,
   isCancelled: boolean,
 ): { active: string; inactive: string } {
   const filePath = getFilePath(argsText)
-  const fileName = filePath?.split("/").pop() || filePath
+  const fileName = filePath?.split("/").pop()
 
-  // File operation tools with custom headings
-  if (fileName) {
-    switch (toolName.toLowerCase()) {
-      case "write":
-        return {
-          active: `Writing to ${fileName}...`,
-          inactive: isCancelled ? `Cancelled: Write ${fileName}` : `Wrote to ${fileName}`,
-        }
-      case "read":
-        return {
-          active: `Reading ${fileName}...`,
-          inactive: isCancelled ? `Cancelled: Read ${fileName}` : `Read ${fileName}`,
-        }
-      case "edit":
-      case "update":
-        return {
-          active: `Updating ${fileName}...`,
-          inactive: isCancelled ? `Cancelled: Update ${fileName}` : `Updated ${fileName}`,
-        }
-      default:
-        return {
-          active: `Using ${toolName}...`,
-          inactive: isCancelled ? `Cancelled: ${toolName}` : `Used ${toolName}`,
-        }
+  const verbs = TOOL_VERBS[toolName.toLowerCase()]
+  if (!verbs) {
+    return {
+      active: `Using ${toolName}...`,
+      inactive: isCancelled ? `Cancelled: ${toolName}` : `Used ${toolName}`,
     }
-  } else {
-    switch (toolName.toLowerCase()) {
-      case "write":
-        return {
-          active: `Writing...`,
-          inactive: isCancelled ? `Cancelled: Write` : `Wrote`,
-        }
-      case "read":
-        return {
-          active: `Reading...`,
-          inactive: isCancelled ? `Cancelled: Read` : `Read`,
-        }
-      case "edit":
-        return {
-          active: `Updating...`,
-          inactive: isCancelled ? `Cancelled: Update` : `Updated`,
-        }
-      default:
-        return {
-          active: `Using ${toolName}...`,
-          inactive: isCancelled ? `Cancelled: ${toolName}` : `Used ${toolName}`,
-        }
-    }
+  }
+
+  const [active, past, prep] = verbs
+  const target = fileName ? `${prep ? `${prep} ` : ""}${fileName}` : ""
+
+  return {
+    active: `${active}${target ? ` ${target}` : ""}...`,
+    inactive: isCancelled ? `Cancelled: ${past}` : `${past}${target ? ` ${target}` : ""}`,
   }
 }
 
@@ -88,25 +61,8 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
   result,
   status,
 }) => {
-  const [isOptionHeld, setIsOptionHeld] = useState(false)
+  const isOptionHeld = useAltKeyHeld()
   const fileViewer = useFileViewer()
-
-  // Track Option/Alt key state
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey) setIsOptionHeld(true)
-    }
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (!e.altKey) setIsOptionHeld(false)
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    window.addEventListener("keyup", handleKeyUp)
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-      window.removeEventListener("keyup", handleKeyUp)
-    }
-  }, [])
 
   const isRunning = status?.type === "running"
   const isCancelled = status?.type === "incomplete" && status.reason === "cancelled"
@@ -128,12 +84,11 @@ export const ToolFallback: ToolCallMessagePartComponent = ({
 
   // Check if this is a clickable file tool (Write, Edit, Update)
   const filePath = getFilePath(argsText)
-  const fileTools = ["write", "edit", "update"]
   const isWhiteboardFile =
     filePath?.endsWith("whiteboard.yml") || filePath?.endsWith("whiteboard.md")
   const isClickable =
     isComplete &&
-    fileTools.includes(toolName.toLowerCase()) &&
+    FILE_TOOLS.includes(toolName.toLowerCase()) &&
     filePath &&
     fileViewer &&
     !isWhiteboardFile

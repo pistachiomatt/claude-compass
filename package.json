@@ -6,7 +6,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "PORT=3001 next dev & npm run dev:worker & npm run dev:drizzle-studio",
+    "dev": "PORT=3001 next dev & npm run dev:drizzle-studio",
     "dev:drizzle-studio": "npx drizzle-kit studio --port=3801",
     "dev:worker": "npx tsx ./jobs/worker.ts",
     "build": "next build",

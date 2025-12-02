@@ -25,15 +25,22 @@ interface ChatRuntimeProviderProps {
 
 export function ChatRuntimeProvider({ chatId, children }: ChatRuntimeProviderProps) {
   // Fetch persisted messages
-  const { data: dbMessages = [], isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(chatId)
+  const { data: dbMessages = [], isLoading: isLoadingMessages } =
+    trpc.chat.getMessages.useQuery(chatId)
 
   // Streaming state
-  const { sendMessage, triggerOpening, isStreaming, streamingMessage, error } = useChatStream(chatId)
+  const { sendMessage, triggerOpening, isStreaming, streamingMessage, error } =
+    useChatStream(chatId)
 
   // Auto-trigger opening message for new chats (no messages yet)
   const hasTriggeredOpening = useRef(false)
   useEffect(() => {
-    if (!isLoadingMessages && dbMessages.length === 0 && !hasTriggeredOpening.current && !isStreaming) {
+    if (
+      !isLoadingMessages &&
+      dbMessages.length === 0 &&
+      !hasTriggeredOpening.current &&
+      !isStreaming
+    ) {
       hasTriggeredOpening.current = true
       triggerOpening()
     }
@@ -72,7 +79,6 @@ export function ChatRuntimeProvider({ chatId, children }: ChatRuntimeProviderPro
       }
     },
     onCancel: async () => {
-      // TODO: Implement cancel functionality
       console.log("Cancel requested - not yet implemented")
     },
   })
@@ -84,9 +90,7 @@ export function ChatRuntimeProvider({ chatId, children }: ChatRuntimeProviderPro
       <ChatStreamProvider isCompacting={isCompacting}>
         {children}
         {/* Surface errors to children via context if needed */}
-        {error && (
-          <div className="hidden" data-chat-error={error} />
-        )}
+        {error && <div className="hidden" data-chat-error={error} />}
       </ChatStreamProvider>
     </AssistantRuntimeProvider>
   )

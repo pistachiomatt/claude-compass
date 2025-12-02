@@ -6,6 +6,10 @@ import type { StreamEvent } from "@/lib/agent/streamTypes"
 import type { StreamingMessageState } from "@/lib/chat/messageConverter"
 import getUuid from "@/lib/utils/getUuid"
 
+/**
+ * This hook is used for ./demo to simulate a streaming chat events from a Claude agent.
+ */
+
 type StreamingPart = StreamingMessageState["parts"][number]
 
 export type DemoMessageContent =

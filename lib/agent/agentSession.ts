@@ -65,6 +65,10 @@ export const agentSession = {
    * 5. Persist all new messages (user + assistant)
    * 6. Sync virtual filesystem changes back to DB
    * 7. Save transcript to DB for future restoration
+   *
+   * Below is a similar method, `runTurnStream`, which yields StreamEvents for real-time UI updates.
+   * In prod, we'd refactor these methods to share more code, but for a fast-moving prototyping,
+   * clarity over DRY is more important, IMO.
    */
   async runTurn(
     chatId: string,
